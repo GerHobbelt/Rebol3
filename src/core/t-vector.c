@@ -333,45 +333,33 @@ void Find_Minimum_Of_Vector(REBSER *vect, REBVAL *ret) {
 	SET_NONE(ret);
 	if (len == 0) return;
 
-#define FIND_MIN_INT(type) {             \
+#define FIND_MIN(type, set) {             \
         type *typed_data = (type *)data;     \
         type min_value = typed_data[0];      \
         for (REBLEN i = 1; i < len; i++) {   \
-            if (typed_data[i] < min_value)   \
-                min_value = typed_data[i];   \
+            min_value = (typed_data[i] < min_value) \
+			          ?  typed_data[i] : min_value; \
         }                                    \
-        SET_INTEGER(ret, min_value);         \
-        return;                              \
-    }
-
-#define FIND_MIN_DEC(type) {             \
-        type *typed_data = (type *)data;     \
-        type min_value = typed_data[0];      \
-        for (REBLEN i = 1; i < len; i++) {   \
-            if (typed_data[i] < min_value)   \
-                min_value = typed_data[i];   \
-        }                                    \
-        SET_DECIMAL(ret, min_value);         \
+        set(ret, min_value);         \
         return;                              \
     }
 
 	data = SERIES_DATA(vect);
 
 	switch (VECT_TYPE(vect)) {
-	case VTSI08: FIND_MIN_INT(i8); break;
-	case VTSI16: FIND_MIN_INT(i16); break;
-	case VTSI32: FIND_MIN_INT(i32); break;
-	case VTSI64: FIND_MIN_INT(i64); break;
-	case VTUI08: FIND_MIN_INT(u8); break;
-	case VTUI16: FIND_MIN_INT(u16); break;
-	case VTUI32: FIND_MIN_INT(u32); break;
-	case VTUI64: FIND_MIN_INT(u64); break;
-	case VTSF32: FIND_MIN_DEC(float); break;
-	case VTSF64: FIND_MIN_DEC(double); break;
+	case VTSI08: FIND_MIN(i8, SET_INTEGER); break;
+	case VTSI16: FIND_MIN(i16, SET_INTEGER); break;
+	case VTSI32: FIND_MIN(i32, SET_INTEGER); break;
+	case VTSI64: FIND_MIN(i64, SET_INTEGER); break;
+	case VTUI08: FIND_MIN(u8, SET_INTEGER); break;
+	case VTUI16: FIND_MIN(u16, SET_INTEGER); break;
+	case VTUI32: FIND_MIN(u32, SET_INTEGER); break;
+	case VTUI64: FIND_MIN(u64, SET_INTEGER); break;
+	case VTSF32: FIND_MIN(float, SET_DECIMAL); break;
+	case VTSF64: FIND_MIN(double, SET_DECIMAL); break;
 	}
 
-#undef FIND_MIN_INT
-#undef FIND_MIN_DEC
+#undef FIND_MIN
 }
 
 void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
@@ -383,45 +371,33 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 	SET_NONE(ret);
 	if (len == 0) return;
 
-#define FIND_MAX_INT(type) {             \
+#define FIND_MAX(type, set) {             \
         type *typed_data = (type *)data;     \
         type max_value = typed_data[0];      \
         for (REBLEN i = 1; i < len; i++) {   \
-            if (typed_data[i] > max_value)   \
-                max_value = typed_data[i];   \
+            max_value = (typed_data[i] > max_value) \
+                      ?  typed_data[i] : max_value; \
         }                                    \
-        SET_INTEGER(ret, max_value);         \
-        return;                              \
-    }
-
-#define FIND_MAX_DEC(type) {             \
-        type *typed_data = (type *)data;     \
-        type max_value = typed_data[0];      \
-        for (REBLEN i = 1; i < len; i++) {   \
-            if (typed_data[i] > max_value)   \
-                max_value = typed_data[i];   \
-        }                                    \
-        SET_DECIMAL(ret, max_value);         \
+        set(ret, max_value);         \
         return;                              \
     }
 
 	data = SERIES_DATA(vect);
 
 	switch (VECT_TYPE(vect)) {
-	case VTSI08: FIND_MAX_INT(i8); break;
-	case VTSI16: FIND_MAX_INT(i16); break;
-	case VTSI32: FIND_MAX_INT(i32); break;
-	case VTSI64: FIND_MAX_INT(i64); break;
-	case VTUI08: FIND_MAX_INT(u8); break;
-	case VTUI16: FIND_MAX_INT(u16); break;
-	case VTUI32: FIND_MAX_INT(u32); break;
-	case VTUI64: FIND_MAX_INT(u64); break;
-	case VTSF32: FIND_MAX_DEC(float); break;
-	case VTSF64: FIND_MAX_DEC(double); break;
+	case VTSI08: FIND_MAX(i8, SET_INTEGER); break;
+	case VTSI16: FIND_MAX(i16, SET_INTEGER); break;
+	case VTSI32: FIND_MAX(i32, SET_INTEGER); break;
+	case VTSI64: FIND_MAX(i64, SET_INTEGER); break;
+	case VTUI08: FIND_MAX(u8, SET_INTEGER); break;
+	case VTUI16: FIND_MAX(u16, SET_INTEGER); break;
+	case VTUI32: FIND_MAX(u32, SET_INTEGER); break;
+	case VTUI64: FIND_MAX(u64, SET_INTEGER); break;
+	case VTSF32: FIND_MAX(float, SET_DECIMAL); break;
+	case VTSF64: FIND_MAX(double, SET_DECIMAL); break;
 	}
 
-#undef FIND_MAX_INT
-#undef FIND_MAX_DEC
+#undef FIND_MAX
 }
 
 
@@ -513,15 +489,23 @@ return_number:
 }
 
 #ifndef EXCLUDE_VECTOR_MATH
+// Helper macro to generate per-type math code
+#define VEC_OP_LOOP(type, op, val) \
+    do { \
+        type *p = (type*)data; \
+        for (REBCNT j = n; j < len; ++j) p[j] op (type)(val); \
+    } while (0)
+
 /***********************************************************************
 **
-*/	REBVAL* Math_Op_Vector(REBVAL *v1, REBVAL *v2, REBCNT action)
+*/	void Math_Op_Vector(REBVAL *out, REBVAL *v1, REBVAL *v2, REBCNT action)
 /*
 **		Do basic math operation on a vector
 **
 ***********************************************************************/
 {
 	REBSER *vect = NULL;
+	REBSER *dest;
 	REBYTE *data;
 	REBCNT bits;
 	REBCNT len;
@@ -541,11 +525,13 @@ return_number:
 		right = v1;
 	} else {
 		Trap_Action(VAL_TYPE(v1), action);
-		return NULL;
+		return;
 	}
+
 	vect = VAL_SERIES(left);
 	bits = VECT_TYPE(vect);
-	data = vect->data;
+	len = VAL_LEN(left);
+
 
 	if (IS_INTEGER(right)) {
 		i = VAL_INT64(right);
@@ -555,78 +541,295 @@ return_number:
 		i = (REBI64)f;
 	}
 
-	n = VAL_INDEX(left);
-	len = n + VAL_LEN(left);
+	dest = Copy_Series_Part(vect, VAL_INDEX(left), len);
+	dest->size = vect->size; // attributes
+	data = dest->data;
+	SET_VECTOR(out, dest);
+	n = 0;
+
 
 	switch (action) {
-		case A_ADD:
-			switch (bits) {
-			case VTSI08: for (; n<len; n++) ( (i8*)data)[n] += ( i8)i; break;
-			case VTSI16: for (; n<len; n++) ((i16*)data)[n] += (i16)i; break;
-			case VTSI32: for (; n<len; n++) ((i32*)data)[n] += (i32)i; break;
-			case VTSI64: for (; n<len; n++) ((i64*)data)[n] += (i64)i; break;
-			case VTUI08: for (; n<len; n++) (( u8*)data)[n] += ( u8)i; break;
-			case VTUI16: for (; n<len; n++)	((u16*)data)[n] += (u16)i; break;
-			case VTUI32: for (; n<len; n++) ((u32*)data)[n] += (u32)i; break;
-			case VTUI64: for (; n<len; n++)	((i64*)data)[n] += (u64)i; break;
-//			case VTSF08:
-//			case VTSF16:
-			case VTSF32: for (; n<len; n++) (( float*)data)[n] += (float)f; break;
-			case VTSF64: for (; n<len; n++) ((double*)data)[n] += f; break;
-			}
-			break;
-		case A_SUBTRACT:
-			switch (bits) {
-			case VTSI08: for (; n<len; n++) (( i8*)data)[n] -= ( i8)i; break;
-			case VTSI16: for (; n<len; n++) ((i16*)data)[n] -= (i16)i; break;
-			case VTSI32: for (; n<len; n++) ((i32*)data)[n] -= (i32)i; break;
-			case VTSI64: for (; n<len; n++) ((i64*)data)[n] -= (i64)i; break;
-			case VTUI08: for (; n<len; n++) (( u8*)data)[n] -= ( u8)i; break;
-			case VTUI16: for (; n<len; n++)	((u16*)data)[n] -= (u16)i; break;
-			case VTUI32: for (; n<len; n++) ((u32*)data)[n] -= (u32)i; break;
-			case VTUI64: for (; n<len; n++)	((i64*)data)[n] -= (u64)i; break;
-//			case VTSF08:
-//			case VTSF16:
-			case VTSF32: for (; n<len; n++) (( float*)data)[n] -= (float)f; break;
-			case VTSF64: for (; n<len; n++) ((double*)data)[n] -= f; break;
-			}
-			break;
-		case A_MULTIPLY:
-			switch (bits) {
-			case VTSI08: for (; n<len; n++) (( i8*)data)[n] *= ( i8)i; break;
-			case VTSI16: for (; n<len; n++) ((i16*)data)[n] *= (i16)i; break;
-			case VTSI32: for (; n<len; n++) ((i32*)data)[n] *= (i32)i; break;
-			case VTSI64: for (; n<len; n++) ((i64*)data)[n] *= (i64)i; break;
-			case VTUI08: for (; n<len; n++) (( u8*)data)[n] *= ( u8)i; break;
-			case VTUI16: for (; n<len; n++)	((u16*)data)[n] *= (u16)i; break;
-			case VTUI32: for (; n<len; n++) ((u32*)data)[n] *= (u32)i; break;
-			case VTUI64: for (; n<len; n++)	((i64*)data)[n] *= (u64)i; break;
-//			case VTSF08:
-//			case VTSF16:
-			case VTSF32: for (; n<len; n++) (( float*)data)[n] *= (float)f; break;
-			case VTSF64: for (; n<len; n++) ((double*)data)[n] *= f; break;
-			}
-			break;
-		case A_DIVIDE:
-			if (i == 0) Trap0(RE_ZERO_DIVIDE);
-			switch (bits) {
-			case VTSI08: for (; n<len; n++) (( i8*)data)[n] /= ( i8)i; break;
-			case VTSI16: for (; n<len; n++) ((i16*)data)[n] /= (i16)i; break;
-			case VTSI32: for (; n<len; n++) ((i32*)data)[n] /= (i32)i; break;
-			case VTSI64: for (; n<len; n++) ((i64*)data)[n] /= (i64)i; break;
-			case VTUI08: for (; n<len; n++) (( u8*)data)[n] /= ( u8)i; break;
-			case VTUI16: for (; n<len; n++)	((u16*)data)[n] /= (u16)i; break;
-			case VTUI32: for (; n<len; n++) ((u32*)data)[n] /= (u32)i; break;
-			case VTUI64: for (; n<len; n++)	((i64*)data)[n] /= (u64)i; break;
-//			case VTSF08:
-//			case VTSF16:
-			case VTSF32: for (; n<len; n++) (( float*)data)[n] /= (float)f; break;
-			case VTSF64: for (; n<len; n++) ((double*)data)[n] /= f; break;
-			}
-			break;
+	case A_ADD:
+		switch (bits) {
+		case VTSI08: VEC_OP_LOOP(i8, +=, i); break;
+		case VTSI16: VEC_OP_LOOP(i16, +=, i); break;
+		case VTSI32: VEC_OP_LOOP(i32, +=, i); break;
+		case VTSI64: VEC_OP_LOOP(i64, +=, i); break;
+		case VTUI08: VEC_OP_LOOP(u8, +=, i); break;
+		case VTUI16: VEC_OP_LOOP(u16, +=, i); break;
+		case VTUI32: VEC_OP_LOOP(u32, +=, i); break;
+		case VTUI64: VEC_OP_LOOP(u64, +=, i); break;
+		case VTSF32: VEC_OP_LOOP(float, +=, f); break;
+		case VTSF64: VEC_OP_LOOP(double, +=, f); break;
+		}
+		break;
+	case A_SUBTRACT:
+		switch (bits) {
+		case VTSI08: VEC_OP_LOOP(i8, -=, i); break;
+		case VTSI16: VEC_OP_LOOP(i16, -=, i); break;
+		case VTSI32: VEC_OP_LOOP(i32, -=, i); break;
+		case VTSI64: VEC_OP_LOOP(i64, -=, i); break;
+		case VTUI08: VEC_OP_LOOP(u8, -=, i); break;
+		case VTUI16: VEC_OP_LOOP(u16, -=, i); break;
+		case VTUI32: VEC_OP_LOOP(u32, -=, i); break;
+		case VTUI64: VEC_OP_LOOP(u64, -=, i); break;
+		case VTSF32: VEC_OP_LOOP(float, -=, f); break;
+		case VTSF64: VEC_OP_LOOP(double, -=, f); break;
+		}
+		break;
+	case A_MULTIPLY:
+		switch (bits) {
+		case VTSI08: VEC_OP_LOOP(i8, *=, i); break;
+		case VTSI16: VEC_OP_LOOP(i16, *=, i); break;
+		case VTSI32: VEC_OP_LOOP(i32, *=, i); break;
+		case VTSI64: VEC_OP_LOOP(i64, *=, i); break;
+		case VTUI08: VEC_OP_LOOP(u8, *=, i); break;
+		case VTUI16: VEC_OP_LOOP(u16, *=, i); break;
+		case VTUI32: VEC_OP_LOOP(u32, *=, i); break;
+		case VTUI64: VEC_OP_LOOP(u64, *=, i); break;
+		case VTSF32: VEC_OP_LOOP(float, *=, f); break;
+		case VTSF64: VEC_OP_LOOP(double, *=, f); break;
+		}
+		break;
+	case A_DIVIDE:
+		if (i == 0 && bits <= VTUI64) Trap0(RE_ZERO_DIVIDE);
+		switch (bits) {
+		case VTSI08: VEC_OP_LOOP(i8, /=, i); break;
+		case VTSI16: VEC_OP_LOOP(i16, /=, i); break;
+		case VTSI32: VEC_OP_LOOP(i32, /=, i); break;
+		case VTSI64: VEC_OP_LOOP(i64, /=, i); break;
+		case VTUI08: VEC_OP_LOOP(u8, /=, i); break;
+		case VTUI16: VEC_OP_LOOP(u16, /=, i); break;
+		case VTUI32: VEC_OP_LOOP(u32, /=, i); break;
+		case VTUI64: VEC_OP_LOOP(u64, /=, i); break;
+		case VTSF32: VEC_OP_LOOP(float, /=, f); break;
+		case VTSF64: VEC_OP_LOOP(double, /=, f); break;
+		}
+		break;
+	case A_AND:
+		switch (bits) {
+		case VTSI08: VEC_OP_LOOP(i8, &=, i); break;
+		case VTSI16: VEC_OP_LOOP(i16, &=, i); break;
+		case VTSI32: VEC_OP_LOOP(i32, &=, i); break;
+		case VTSI64: VEC_OP_LOOP(i64, &=, i); break;
+		case VTUI08: VEC_OP_LOOP(u8, &=, i); break;
+		case VTUI16: VEC_OP_LOOP(u16, &=, i); break;
+		case VTUI32: VEC_OP_LOOP(u32, &=, i); break;
+		case VTUI64: VEC_OP_LOOP(u64, &=, i); break;
+		default: Trap_Math_Args(REB_DECIMAL, action);
+		}
+		break;
+	case A_OR:
+		switch (bits) {
+		case VTSI08: VEC_OP_LOOP(i8, |=, i); break;
+		case VTSI16: VEC_OP_LOOP(i16, |=, i); break;
+		case VTSI32: VEC_OP_LOOP(i32, |=, i); break;
+		case VTSI64: VEC_OP_LOOP(i64, |=, i); break;
+		case VTUI08: VEC_OP_LOOP(u8, |=, i); break;
+		case VTUI16: VEC_OP_LOOP(u16, |=, i); break;
+		case VTUI32: VEC_OP_LOOP(u32, |=, i); break;
+		case VTUI64: VEC_OP_LOOP(u64, |=, i); break;
+		default: Trap_Math_Args(REB_DECIMAL, action);
+		}
+		break;
+	case A_XOR:
+		switch (bits) {
+		case VTSI08: VEC_OP_LOOP(i8, ^=, i); break;
+		case VTSI16: VEC_OP_LOOP(i16, ^=, i); break;
+		case VTSI32: VEC_OP_LOOP(i32, ^=, i); break;
+		case VTSI64: VEC_OP_LOOP(i64, ^=, i); break;
+		case VTUI08: VEC_OP_LOOP(u8, ^=, i); break;
+		case VTUI16: VEC_OP_LOOP(u16, ^=, i); break;
+		case VTUI32: VEC_OP_LOOP(u32, ^=, i); break;
+		case VTUI64: VEC_OP_LOOP(u64, ^=, i); break;
+		default: Trap_Math_Args(REB_DECIMAL, action);
+		}
+		break;
+	case A_REMAINDER:
+		if (i == 0) Trap0(RE_ZERO_DIVIDE);
+		switch (bits) {
+		case VTSI08: VEC_OP_LOOP(i8, %=, i); break;
+		case VTSI16: VEC_OP_LOOP(i16, %=, i); break;
+		case VTSI32: VEC_OP_LOOP(i32, %=, i); break;
+		case VTSI64: VEC_OP_LOOP(i64, %=, i); break;
+		case VTUI08: VEC_OP_LOOP(u8, %=, i); break;
+		case VTUI16: VEC_OP_LOOP(u16, %=, i); break;
+		case VTUI32: VEC_OP_LOOP(u32, %=, i); break;
+		case VTUI64: VEC_OP_LOOP(u64, %=, i); break;
+		case VTSF32: for (REBCNT j = n; j < len; ++j) ((float *)data)[j] = fmodf(((float *)data)[j], (float)f); break;
+		case VTSF64: for (REBCNT j = n; j < len; ++j) ((double *)data)[j] = fmod(((double *)data)[j], f); break;
+		}
+		break;
 	}
-	return left;
+	return;
 }
+#undef VEC_OP_LOOP
+
+// Helper macro for elementwise vector ops
+#define VEC_OP_LOOP(type, op) \
+    do { \
+		type *o = (type*)data; \
+        type *p = (type*)data1; \
+        type *q = (type*)data2; \
+        for (REBCNT j = n; j < len; ++j) o[j] = p[idx1 + j] op q[idx2 + j]; \
+    } while (0)
+#define VEC_OP_LOOP_NO_ZERO(type, op) \
+    do { \
+		type *o = (type*)data; \
+        type *p = (type*)data1; \
+        type *q = (type*)data2; \
+        for (REBCNT j = n; j < len; ++j) {\
+			if (q[idx2 + j] == 0) Trap0(RE_ZERO_DIVIDE);\
+			o[j] = p[idx1 + j] op q[idx2 + j];} \
+    } while (0)
+
+/***********************************************************************
+**
+*/	void Math_Op_Vector_Vector(REBVAL *out, REBVAL *v1, REBVAL *v2, REBCNT action)
+/*
+**		Do basic math operation on a vector
+**
+***********************************************************************/
+{
+	REBSER *vect1 = VAL_SERIES(v1);
+	REBSER *vect2 = VAL_SERIES(v2);
+	REBLEN len1 = VAL_LEN(v1);
+	REBLEN len2 = VAL_LEN(v2);
+	REBLEN len, n;
+	REBLEN idx1 = VAL_INDEX(v1);
+	REBLEN idx2 = VAL_INDEX(v2);
+	REBINT bits1 = VECT_TYPE(vect1);
+	REBINT bits2 = VECT_TYPE(vect2);
+	REBSER *dest;
+	REBYTE *data;
+	REBYTE *data1 = vect1->data;
+	REBYTE *data2 = vect2->data;
+
+	len = MIN(len1, len2);
+
+	if (bits1 != bits2)	Trap0(RE_VECTOR_NOT_COMPATIBLE);
+	dest = Make_Series(MAX(len,1), SERIES_WIDE(vect1), FALSE);
+	dest->size = vect1->size; // attributes
+	data = dest->data;
+	SERIES_TAIL(dest) = len;
+	SET_VECTOR(out, dest);
+	n = 0;
+
+	switch (action) {
+	case A_ADD:
+		switch (bits1) {
+		case VTSI08: VEC_OP_LOOP(i8, +); break;
+		case VTSI16: VEC_OP_LOOP(i16, +); break;
+		case VTSI32: VEC_OP_LOOP(i32, +); break;
+		case VTSI64: VEC_OP_LOOP(i64, +); break;
+		case VTUI08: VEC_OP_LOOP(u8, +); break;
+		case VTUI16: VEC_OP_LOOP(u16, +); break;
+		case VTUI32: VEC_OP_LOOP(u32, +); break;
+		case VTUI64: VEC_OP_LOOP(u64, +); break;
+		case VTSF32: VEC_OP_LOOP(float, +); break;
+		case VTSF64: VEC_OP_LOOP(double, +); break;
+		}
+		break;
+	case A_SUBTRACT:
+		switch (bits1) {
+		case VTSI08: VEC_OP_LOOP(i8, -); break;
+		case VTSI16: VEC_OP_LOOP(i16, -); break;
+		case VTSI32: VEC_OP_LOOP(i32, -); break;
+		case VTSI64: VEC_OP_LOOP(i64, -); break;
+		case VTUI08: VEC_OP_LOOP(u8, -); break;
+		case VTUI16: VEC_OP_LOOP(u16, -); break;
+		case VTUI32: VEC_OP_LOOP(u32, -); break;
+		case VTUI64: VEC_OP_LOOP(u64, -); break;
+		case VTSF32: VEC_OP_LOOP(float, -); break;
+		case VTSF64: VEC_OP_LOOP(double, -); break;
+		}
+		break;
+	case A_MULTIPLY:
+		switch (bits1) {
+		case VTSI08: VEC_OP_LOOP(i8, *); break;
+		case VTSI16: VEC_OP_LOOP(i16, *); break;
+		case VTSI32: VEC_OP_LOOP(i32, *); break;
+		case VTSI64: VEC_OP_LOOP(i64, *); break;
+		case VTUI08: VEC_OP_LOOP(u8, *); break;
+		case VTUI16: VEC_OP_LOOP(u16, *); break;
+		case VTUI32: VEC_OP_LOOP(u32, *); break;
+		case VTUI64: VEC_OP_LOOP(u64, *); break;
+		case VTSF32: VEC_OP_LOOP(float, *); break;
+		case VTSF64: VEC_OP_LOOP(double, *); break;
+		}
+		break;
+	case A_DIVIDE:
+		switch (bits1) {
+		case VTSI08: VEC_OP_LOOP_NO_ZERO(i8, /); break;
+		case VTSI16: VEC_OP_LOOP_NO_ZERO(i16, /); break;
+		case VTSI32: VEC_OP_LOOP_NO_ZERO(i32, /); break;
+		case VTSI64: VEC_OP_LOOP_NO_ZERO(i64, /); break;
+		case VTUI08: VEC_OP_LOOP_NO_ZERO(u8, /); break;
+		case VTUI16: VEC_OP_LOOP_NO_ZERO(u16, /); break;
+		case VTUI32: VEC_OP_LOOP_NO_ZERO(u32, /); break;
+		case VTUI64: VEC_OP_LOOP_NO_ZERO(u64, /); break;
+		case VTSF32: VEC_OP_LOOP_NO_ZERO(float, /); break;
+		case VTSF64: VEC_OP_LOOP_NO_ZERO(double, /); break;
+		}
+		break;
+	case A_AND:
+		switch (bits1) {
+		case VTSI08: VEC_OP_LOOP(i8, &); break;
+		case VTSI16: VEC_OP_LOOP(i16, &); break;
+		case VTSI32: VEC_OP_LOOP(i32, &); break;
+		case VTSI64: VEC_OP_LOOP(i64, &); break;
+		case VTUI08: VEC_OP_LOOP(u8, &); break;
+		case VTUI16: VEC_OP_LOOP(u16, &); break;
+		case VTUI32: VEC_OP_LOOP(u32, &); break;
+		case VTUI64: VEC_OP_LOOP(u64, &); break;
+		default: Trap_Math_Args(REB_DECIMAL, action);
+		}
+		break;
+	case A_OR:
+		switch (bits1) {
+		case VTSI08: VEC_OP_LOOP(i8, |); break;
+		case VTSI16: VEC_OP_LOOP(i16, |); break;
+		case VTSI32: VEC_OP_LOOP(i32, |); break;
+		case VTSI64: VEC_OP_LOOP(i64, |); break;
+		case VTUI08: VEC_OP_LOOP(u8, |); break;
+		case VTUI16: VEC_OP_LOOP(u16, |); break;
+		case VTUI32: VEC_OP_LOOP(u32, |); break;
+		case VTUI64: VEC_OP_LOOP(u64, |); break;
+		default: Trap_Math_Args(REB_DECIMAL, action);
+		}
+		break;
+	case A_XOR:
+		switch (bits1) {
+		case VTSI08: VEC_OP_LOOP(i8, ^); break;
+		case VTSI16: VEC_OP_LOOP(i16, ^); break;
+		case VTSI32: VEC_OP_LOOP(i32, ^); break;
+		case VTSI64: VEC_OP_LOOP(i64, ^); break;
+		case VTUI08: VEC_OP_LOOP(u8, ^); break;
+		case VTUI16: VEC_OP_LOOP(u16, ^); break;
+		case VTUI32: VEC_OP_LOOP(u32, ^); break;
+		case VTUI64: VEC_OP_LOOP(u64, ^); break;
+		default: Trap_Math_Args(REB_DECIMAL, action);
+		}
+		break;
+	case A_REMAINDER:
+		switch (bits1) {
+		case VTSI08: VEC_OP_LOOP_NO_ZERO(i8, %); break;
+		case VTSI16: VEC_OP_LOOP_NO_ZERO(i16, %); break;
+		case VTSI32: VEC_OP_LOOP_NO_ZERO(i32, %); break;
+		case VTSI64: VEC_OP_LOOP_NO_ZERO(i64, %); break;
+		case VTUI08: VEC_OP_LOOP_NO_ZERO(u8, %); break;
+		case VTUI16: VEC_OP_LOOP_NO_ZERO(u16, %); break;
+		case VTUI32: VEC_OP_LOOP_NO_ZERO(u32, %); break;
+		case VTUI64: VEC_OP_LOOP_NO_ZERO(u64, %); break;
+		case VTSF32: for (REBCNT j = n; j < len; ++j) ((float *)data)[j] = fmodf(((float *)data1)[idx1 + j], ((float *)data2)[idx2 + j]); break;
+		case VTSF64: for (REBCNT j = n; j < len; ++j) ((double *)data)[j] = fmod(((double *)data1)[idx1 + j], ((double *)data2)[idx2+j]); break;
+		}
+		break;
+	}
+	return;
+}
+#undef VEC_OP_LOOP
+#undef VEC_OP_LOOP_NO_ZERO
 #endif
 
 /***********************************************************************
@@ -781,10 +984,73 @@ REBOOL Get_Vector_Spec_From_Symbol(REBCNT sym, REBINT *type, REBINT *sign, REBIN
 
 /***********************************************************************
 **
-*/	REBVAL *Make_Vector_Spec(REBVAL *bp, REBVAL *value)
+*/	REBVAL *Construct_Vector(REBVAL *bp, REBVAL *value)
 /*
-**	Make a vector from a block spec.
+**     Vector construction syntax. Supports only the new short variants.
+**     #(type data index)
 **
+**     Fields:
+**          type:  uint8!, uint16!, uint32!, uint64!,
+**                 int8!, int16!, int32!, int64!,
+*                  float32!, float64!
+**    		data:  block of values or binary data
+**          index: index in the created vector series
+**
+***********************************************************************/
+{
+	REBINT type = -1; // 0 = int,    1 = float
+	REBINT sign = -1; // 0 = signed, 1 = unsigned
+	REBINT dims = 1;
+	REBINT bits = 32;
+	REBCNT size = 0;
+	REBVAL *iblk = 0;
+	REBSER *vect;
+
+	// Vector type:
+	if (!IS_WORD(bp)) return 0;
+	if (VAL_WORD_CANON(bp) == SYM_VECTOR_TYPE) {
+		// allow #(vector! uint8! [1 2 3])
+		bp++;
+		if (!IS_WORD(bp)) return 0;
+	}
+	if (!Get_Vector_Spec_From_Symbol(VAL_WORD_CANON(bp), &type, &sign, &bits)) return 0;
+	bp++;
+	// Initial data:
+	if (IS_BLOCK(bp) || IS_BINARY(bp)) {
+		REBCNT len = VAL_LEN(bp);
+		if (IS_BINARY(bp)) len /= (bits >> 3);
+		if (len > size && size == 0) size = len;
+		iblk = bp;
+		bp++;
+	}
+	else return 0;
+	// Index offset:
+	if (IS_INTEGER(bp)) {
+		VAL_INDEX(value) = (Int32s(bp, 1) - 1);
+	}
+
+	vect = Make_Vector(type, sign, dims, bits, size);
+	if (!vect) return 0;
+	if (iblk) Set_Vector_Row(vect, iblk);
+
+	SET_TYPE(value, REB_VECTOR);
+	VAL_SERIES(value) = vect;
+	// index set earlier
+
+	return value;
+}
+
+/***********************************************************************
+**
+*/	REBVAL *Make_Vector_Spec(REBVAL *spec, REBVAL *value)
+/*
+**	Make a vector from an extended block spec.
+**
+**     make vector! [uint8! [1 2 3]]
+**     make vector! [uint8! :data]
+**     make vector! [uint8! :size :data :index]
+**
+**     ; backwards compatibility versions:
 **     make vector! [integer! 32 100]
 **     make vector! [decimal! 64 100]
 **     make vector! [unsigned integer! 32]
@@ -796,26 +1062,44 @@ REBOOL Get_Vector_Spec_From_Symbol(REBCNT sym, REBINT *type, REBINT *sign, REBIN
 **    		size:       integer units
 **    		init:		block of values
 **
+**     ; it is possible to use also data directly like:
+**     make vector! [1 2 3] ; 64bit signed integers
+**     make vector! [1.0 2] ; 64bit decimals
+**
 ***********************************************************************/
 {
+	REBVAL *bp = VAL_BLK_DATA(spec);
 	REBINT type = -1; // 0 = int,    1 = float
 	REBINT sign = -1; // 0 = signed, 1 = unsigned
 	REBINT dims = 1;
-	REBINT bits = 32;
+	REBINT bits = 64;
 	REBCNT size = 0;
+	REBLEN index = 0;
 	REBSER *vect;
 	REBVAL *iblk = 0;
+	REBVAL *val;
 
-	// SIGNED / UNSIGNED
 	if (IS_WORD(bp)) {
+		// Using the prefered type like: make vector! [uint8! ...]
 		if (Get_Vector_Spec_From_Symbol(VAL_WORD_CANON(bp), &type, &sign, &bits)) {
 			bp++;
 			goto size_spec;
 		}
+		// Old specification like: make vector! [unsigned integer! 8 ...]
 		switch (VAL_WORD_CANON(bp)) {
 		case SYM_UNSIGNED: sign = 1; bp++; break;
 		case SYM_SIGNED:   sign = 0; bp++; break;
 		}
+	}
+	else if (IS_INTEGER(bp) || IS_DECIMAL(bp)) {
+		// make vector! [1 2 3]
+		// make vector! [1.0 2.0 3.0]
+		// using signed and 64 bits as a default
+		type = IS_INTEGER(bp) ? 0 : 1;
+		sign = 0;
+		size = VAL_LEN(spec);
+		iblk = spec;
+		goto data_spec;
 	}
 
 	// INTEGER! or DECIMAL!
@@ -845,40 +1129,47 @@ REBOOL Get_Vector_Spec_From_Symbol(REBCNT sym, REBINT *type, REBINT *sign, REBIN
 	} else return 0;
 
 size_spec:
-
+	// For size, data and index one can use get-words
+	// eg: make vector! [uint8! :size :data :index]
+	// All these values are optional!
+	val = bp;
+	if (IS_GET_WORD(val))
+		val = Get_Var(val);
 	// SIZE
-	if (IS_INTEGER(bp)) {
-		size = Int32(bp);
+	if (IS_INTEGER(val)) {
+		size = Int32(val);
 		if (size < 0) return 0;
-		bp++;
+		val = ++bp;
+		if (IS_GET_WORD(val))
+			val = Get_Var(val);
 	}
-
 	// Initial data:
-	if (IS_BLOCK(bp) || IS_BINARY(bp)) {
-		REBCNT len = VAL_LEN(bp);
-		if (IS_BINARY(bp)) len /= (bits >> 3);
+	if (IS_BLOCK(val) || IS_BINARY(val)) {
+		REBCNT len = VAL_LEN(val);
+		if (IS_BINARY(val)) len /= (bits >> 3);
 		if (len > size && size == 0) size = len;
-		iblk = bp;
-		bp++;
+		iblk = val;
+		val = ++bp;
+		if (IS_GET_WORD(val))
+			val = Get_Var(val);
 	}
 
 	// Index offset:
-	if (IS_INTEGER(bp)) {
-		VAL_INDEX(value) = (Int32s(bp, 1) - 1);
-		bp++;
+	if (IS_INTEGER(val) || IS_DECIMAL(val)) {
+		index = Int32s(val, 1) - 1;
+		val = ++bp;
+		if (IS_GET_WORD(val)) val = Get_Var(val);
 	}
-	else VAL_INDEX(value) = 0;
 
-	if (NOT_END(bp)) return 0;
-
+	if (NOT_END(val)) return 0;
+data_spec:
 	vect = Make_Vector(type, sign, dims, bits, size);
 	if (!vect) return 0;
-
 	if (iblk) Set_Vector_Row(vect, iblk);
 
 	SET_TYPE(value, REB_VECTOR);
 	VAL_SERIES(value) = vect;
-	// index set earlier
+	VAL_INDEX(value) = index;
 
 	return value;
 }
@@ -888,9 +1179,12 @@ size_spec:
 **
 */	REBFLG MT_Vector(REBVAL *out, REBVAL *data, REBCNT type)
 /*
+**	NOTE: data are on stack, it is not a BLOCK value,
+**        so it is not possible to use macros like VAL_TAIL
+**
 ***********************************************************************/
 {
-	if (Make_Vector_Spec(data, out)) return TRUE;
+	if (Construct_Vector(data, out)) return TRUE;
 	return FALSE;
 }
 
@@ -1023,6 +1317,7 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 	REBVAL *arg = D_ARG(2);
 	REBINT type;
 	REBCNT size, bits;
+	REBLEN index;
 	REBSER *vect;
 	REBSER *ser;
 	REBSER *blk;
@@ -1053,8 +1348,15 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 	case A_SUBTRACT:
 	case A_MULTIPLY:
 	case A_DIVIDE:
-		Math_Op_Vector(value, arg, action);
-		break;
+	case A_OR:
+	case A_AND:
+	case A_XOR:
+	case A_REMAINDER:
+		if (IS_VECTOR(value) && IS_VECTOR(arg))
+			Math_Op_Vector_Vector(D_RET, value, arg, action);
+		else 
+			Math_Op_Vector(D_RET, value, arg, action);
+		return R_RET;
 #endif
 
 	case A_MAKE:
@@ -1078,7 +1380,7 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 
 	case A_TO:
 		// CASE: make vector! [...]
-		if (IS_BLOCK(arg) && Make_Vector_Spec(VAL_BLK_DATA(arg), value)) break;
+		if (IS_BLOCK(arg) && Make_Vector_Spec(arg, value)) break;
 		goto bad_make;
 
 	case A_LENGTHQ:
@@ -1184,6 +1486,29 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 			SET_OBJECT(value, obj);
 		}
 		break;
+	
+	//-- Modification:
+	case A_APPEND:
+	case A_INSERT:
+	case A_CHANGE:
+		// Length of target (may modify index): (arg can be anything)
+		len = Partial1((action == A_CHANGE) ? value : arg, DS_ARG(AN_LENGTH));
+		index = VAL_INDEX(value);
+		REBFLG args = 0;
+		if (DS_REF(AN_PART)) SET_FLAG(args, AN_PART);
+		index = Modify_Vector(action, VAL_SERIES(value), index, arg, args, len, DS_REF(AN_DUP) ? Int32(DS_ARG(AN_COUNT)) : 1);
+		VAL_INDEX(value) = index;
+		break;
+
+	case A_CLEAR:
+		index = VAL_INDEX(value);
+		if (index < VAL_TAIL(value)) {
+			// Null all values.
+			CLEAR(VAL_BIN_DATA(value), VAL_TAIL(value) - index);
+			// Set new tail.
+			VAL_TAIL(value) = index;
+		}
+		break;
 
 	default:
 		Trap_Action(VAL_TYPE(value), action);
@@ -1196,6 +1521,111 @@ bad_make:
 	Trap_Make(REB_VECTOR, arg);
 }
 
+
+/***********************************************************************
+**
+*/	REBCNT Modify_Vector(REBCNT action, REBSER *vect, REBCNT index, REBVAL *src_val, REBCNT flags, REBINT dst_len, REBINT dups)
+/*
+**		action: INSERT, APPEND, CHANGE
+**
+**		vect:	    target
+**		index:      position (in values)
+**		src_val:	source
+**		flags:		AN_PART
+**		dst_len:	length to remove (in bytes)
+**		dups:		dup count
+**
+**		return: new dst_idx
+**
+***********************************************************************/
+{
+	REBSER *src_ser = 0;
+	REBCNT src_idx = 0;
+	REBCNT src_len = 0;
+	REBCNT tail = SERIES_TAIL(vect);
+	REBCNT type = VECT_TYPE(vect);
+	REBCNT bpv = VECT_BYTE_SIZE(type); // bytes per value
+	REBINT size;  // total to insert/append/change (includes dups)
+	REBVAL *val = NULL;
+
+	if (dups < 0) return (action == A_APPEND) ? 0 : index;
+	if (action == A_APPEND || index > tail) index = tail;
+
+	// Use SCAN buffer as a temporary buffer.
+	src_ser = BUF_SCAN;
+	if (IS_VECTOR(src_val)) {
+		REBLEN index = MIN(VAL_TAIL(src_val), VAL_INDEX(src_val));
+		REBLEN part = VAL_TAIL(src_val) - index;
+		if (action != A_CHANGE && GET_FLAG(flags, AN_PART) && dst_len < part)
+			part = dst_len;
+		if (type == VECT_TYPE(VAL_SERIES(src_val))) {
+			// same vector types...
+			src_ser = VAL_SERIES(src_val);
+			src_idx = index;
+			src_len = part;
+		}
+		else {
+			// Make sure that the temp buffer is large enough.
+			RESIZE_SERIES(src_ser, part * bpv);
+			// Encode values from the source vector to the temp buffer.
+			for (REBVAL tmp; src_len < part; index++) {
+				Get_Vector_Value(&tmp, VAL_SERIES(src_val), index);
+				Set_Vector_Value(type, src_ser->data, src_len++, &tmp);
+			}
+		}
+	}
+	else if (IS_BINARY(src_val)) {
+		src_ser = VAL_SERIES(src_val);
+		src_idx = VAL_INDEX(src_val);
+		src_len = (VAL_TAIL(src_val) - src_idx);
+		if (action != A_CHANGE && GET_FLAG(flags, AN_PART) && dst_len < src_len)
+			src_len = dst_len;
+		src_len /= bpv;
+		if (src_len == 0) Trap1(RE_INVALID_DATA, src_val);
+	}
+	else if (IS_BLOCK(src_val)) {
+		REBLEN index = MIN(VAL_TAIL(src_val), VAL_INDEX(src_val));
+		REBLEN part = VAL_TAIL(src_val) - index;
+		// For INSERT or APPEND with /PART use the dst_len not src_len:
+		if (action != A_CHANGE && GET_FLAG(flags, AN_PART))
+			part = dst_len;
+		// Make sure that the temp buffer is large enough.
+		RESIZE_SERIES(src_ser, part * bpv);
+		// Encode values from the block vector to the temp buffer.
+		for (val = VAL_BLK_DATA(src_val); src_len < part; val++) {
+			Set_Vector_Value(type, src_ser->data, src_len++, val);
+		}
+	}
+	else {
+		// Encode single value into the temp buffer.
+		Set_Vector_Value(type, src_ser->data, src_len++, src_val);
+	}
+
+	// Total to insert:
+	size = dups * src_len;
+
+	if (action != A_CHANGE) {
+		// Always expand vect for INSERT and APPEND actions:
+		Expand_Series(vect, index, size);
+	}
+	else {
+		// CHANGE action...
+		if (size > dst_len)
+			Expand_Series(vect, index, size - dst_len);
+		else if (size < dst_len &&GET_FLAG(flags, AN_PART))
+			Remove_Series(vect, index, dst_len - size);
+	}
+
+	// For dup count:
+	for (; dups > 0; dups--) {
+		// Don't use Insert_String as we may be inserting to a binary!
+		// Destination is already expanded above.
+		COPY_MEM(BIN_SKIP(vect, index * bpv), BIN_SKIP(src_ser, src_idx), src_len * bpv);
+		index += src_len;
+	}
+
+	return (action == A_APPEND) ? 0 : index;
+}
 
 /***********************************************************************
 **
@@ -1224,15 +1654,15 @@ bad_make:
 	}
 
 	if (molded) {
-		REBCNT type = (bits >= VTSF32) ? REB_DECIMAL : REB_INTEGER;
-		if (GET_MOPT(mold, MOPT_MOLD_ALL)) {
-			Emit(mold, "#(T ", value);
-			if (bits >= VTUI08 && bits <= VTUI64) Append_Bytes(mold->series, "unsigned ");
-			Emit(mold, "N I I [", type + 1, VECT_BIT_SIZE(bits), len);
-		}
-		else {
+//		REBCNT type = (bits >= VTSF32) ? REB_DECIMAL : REB_INTEGER;
+//		if (GET_MOPT(mold, MOPT_MOLD_ALL)) {
+//			Emit(mold, "#(T ", value);
+//			if (bits >= VTUI08 && bits <= VTUI64) Append_Bytes(mold->series, "unsigned ");
+//			Emit(mold, "N I I [", type + 1, VECT_BIT_SIZE(bits), len);
+//		}
+//		else {
 			Emit(mold, "#(S [", Get_Sym_Name(SYM_INT8X + bits));
-		}
+//		}
 		if (indented && len > 10) {
 			mold->indent++;
 			New_Indented_Line(mold);

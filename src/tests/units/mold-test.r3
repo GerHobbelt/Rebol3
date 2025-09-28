@@ -209,6 +209,10 @@ Rebol [
 	;@@ https://github.com/Oldes/Rebol-issues/issues/683
 		--assert {"😜"} = mold to string! #{F09F989C}
 
+	--test-- "mold string with null char"
+		--assert {"^^@a"} == mold {^@a}
+		--assert {{^^@"}} == mold {^@"}
+
 
 ===end-group=== 
 
@@ -496,6 +500,14 @@ Rebol [
 	bin: none
 	system/options/binary-base: bb
 ===end-group===
+
+
+===start-group=== "reform"
+	--test-- "reform binary!"
+		--assert "Number of input words:  25104 ^/" == reform ["Number of input words: " 25104 LF]
+		--assert "dab is reversed: bad" == reform ["dab" "is reversed:" "bad"]
+===end-group===
+
 
 ===start-group=== "form binary!"
 	;-- form on binary! removes decoration..

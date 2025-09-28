@@ -32,6 +32,21 @@ Rebol [
 	--assert  0 = v/1
 	--assert 98 = v/5
 
+--test-- "Make vector with get-words"
+	data: [1 2 3 4]
+	size: 2
+	--assert {#(uint8! [1 2 3 4])}   == mold make vector! [uint8! :data]
+	--assert {#(uint8! [1 2])}       == mold make vector! [uint8! :size :data]
+	index: 3
+	--assert {#(uint8! [3 4])}       == mold make vector! [uint8! :data :index]
+	size: 4
+	--assert {#(uint8! [3 4])}       == mold make vector! [uint8! :size [1 2 3 4 5] :index]
+	--assert {#(uint8! [1 2 3 4] 3)} == mold/all make vector! [uint8! :size [1 2 3 4 5] :index]
+
+--test-- "Make vector using direct values"
+	--assert (make vector! [1 2 3 4]) == #(int64! [1 2 3 4])
+	--assert (make vector! [1.0 2]) == #(float64! [1.0 2.0])
+
 --test-- "Random shuffle of vector vs. block"
 	;@@ https://github.com/Oldes/Rebol-issues/issues/910
 	;@@ https://github.com/Oldes/Rebol-issues/issues/947
@@ -115,8 +130,9 @@ Rebol [
 	--assert none? v/3
 	--assert 1 = length? v: make vector! [integer! 16 1 #{01000200}]
 	--assert none? v/2
-	--assert 1 = length? v: #(i16! 1 #{01000200})
-	--assert none? v/2
+	;- It's not supported to specify size with the construction syntax anymore
+	;--assert 1 = length? v: #(i16! 1 #{01000200})
+	;--assert none? v/2
 
 --test-- "Extending input specification when size and series is provided"
 	--assert 4 = length? v: make vector! [integer! 16 4 [1 2]]
@@ -135,13 +151,13 @@ Rebol [
 	;@@ https://github.com/Oldes/Rebol-issues/issues/756
 	--assert "#(int32! [0 0])" = mold make vector! [signed integer! 32 2]
 	--assert "#(uint32! [0 0])" = mold make vector! [unsigned integer! 32 2]
-	--assert "#(vector! integer! 32 2 [0 0])" = mold/all make vector! [signed integer! 32 2]
-	--assert "#(vector! unsigned integer! 32 2 [0 0])" = mold/all make vector! [unsigned integer! 32 2]
+	--assert "#(int32! [0 0])" = mold/all make vector! [signed integer! 32 2]
+	--assert "#(uint32! [0 0])" = mold/all make vector! [unsigned integer! 32 2]
 
 --test-- "MOLD/flat on vector"
 	;@@ https://github.com/Oldes/Rebol-issues/issues/2349
 	--assert (mold/flat make vector! [integer! 8 12]) = {#(int8! [0 0 0 0 0 0 0 0 0 0 0 0])}
-	--assert (mold/all/flat make vector! [integer! 8 12]) = "#(vector! integer! 8 12 [0 0 0 0 0 0 0 0 0 0 0 0])"
+	--assert (mold/all/flat make vector! [integer! 8 12]) = "#(int8! [0 0 0 0 0 0 0 0 0 0 0 0])"
 	--assert (mold make vector! [integer! 8  2]) = "#(int8! [0 0])"
 	--assert (mold make vector! [integer! 8 20]) = {#(int8! [
     0 0 0 0 0 0 0 0 0 0
@@ -230,28 +246,30 @@ Rebol [
 ===start-group=== "VECTOR compact construction"
 	;@@ https://github.com/Oldes/Rebol-issues/issues/2396
 	--test-- "Compact construction syntax (empty)"
-		--assert (mold #(i8! ))  == "#(int8! [])"
-		--assert (mold #(i16!))  == "#(int16! [])"
-		--assert (mold #(i32!))  == "#(int32! [])"
-		--assert (mold #(i64!))  == "#(int64! [])"
-		--assert (mold #(u8! ))  == "#(uint8! [])"
-		--assert (mold #(u16!))  == "#(uint16! [])"
-		--assert (mold #(u32!))  == "#(uint32! [])"
-		--assert (mold #(u64!))  == "#(uint64! [])"
-		--assert (mold #(f32! )) == "#(float32! [])"
-		--assert (mold #(f64! )) == "#(float64! [])"
+		;- Not supported anymore!
+		;--assert (mold #(i8! ))  == "#(int8! [])"
+		;--assert (mold #(i16!))  == "#(int16! [])"
+		;--assert (mold #(i32!))  == "#(int32! [])"
+		;--assert (mold #(i64!))  == "#(int64! [])"
+		;--assert (mold #(u8! ))  == "#(uint8! [])"
+		;--assert (mold #(u16!))  == "#(uint16! [])"
+		;--assert (mold #(u32!))  == "#(uint32! [])"
+		;--assert (mold #(u64!))  == "#(uint64! [])"
+		;--assert (mold #(f32! )) == "#(float32! [])"
+		;--assert (mold #(f64! )) == "#(float64! [])"
 
 	--test-- "Compact construction syntax (size)"
-		--assert (mold #(i8!  3)) == "#(int8! [0 0 0])"
-		--assert (mold #(i16! 3)) == "#(int16! [0 0 0])"
-		--assert (mold #(i32! 3)) == "#(int32! [0 0 0])"
-		--assert (mold #(i64! 3)) == "#(int64! [0 0 0])"
-		--assert (mold #(u8!  3)) == "#(uint8! [0 0 0])"
-		--assert (mold #(u16! 3)) == "#(uint16! [0 0 0])"
-		--assert (mold #(u32! 3)) == "#(uint32! [0 0 0])"
-		--assert (mold #(u64! 3)) == "#(uint64! [0 0 0])"
-		--assert (mold #(f32! 3)) == "#(float32! [0.0 0.0 0.0])"
-		--assert (mold #(f64! 3)) == "#(float64! [0.0 0.0 0.0])"
+		;- Not supported anymore!
+		;--assert (mold #(i8!  3)) == "#(int8! [0 0 0])"
+		;--assert (mold #(i16! 3)) == "#(int16! [0 0 0])"
+		;--assert (mold #(i32! 3)) == "#(int32! [0 0 0])"
+		;--assert (mold #(i64! 3)) == "#(int64! [0 0 0])"
+		;--assert (mold #(u8!  3)) == "#(uint8! [0 0 0])"
+		;--assert (mold #(u16! 3)) == "#(uint16! [0 0 0])"
+		;--assert (mold #(u32! 3)) == "#(uint32! [0 0 0])"
+		;--assert (mold #(u64! 3)) == "#(uint64! [0 0 0])"
+		;--assert (mold #(f32! 3)) == "#(float32! [0.0 0.0 0.0])"
+		;--assert (mold #(f64! 3)) == "#(float64! [0.0 0.0 0.0])"
 
 	--test-- "Compact construction syntax (data)"
 		--assert (mold #(i8!  [1 2])) == "#(int8! [1 2])"
@@ -388,82 +406,207 @@ Rebol [
 
 --test-- "VECTOR 8bit integer add/subtract"
 	v: #(u8![1 2 3 4])
-	--assert (v + 200) = #(u8![201 202 203 204])
+	--assert (v: v + 200) = #(u8![201 202 203 204])
 	; the values are truncated on overflow:
-	--assert (v + 200) = #(u8![145 146 147 148])
-	--assert (v - 400) = #(u8![1 2 3 4])
-	subtract (add v 10) 10
+	--assert (v: v + 200) = #(u8![145 146 147 148])
+	--assert (v: v - 400) = #(u8![1 2 3 4])
+	v: subtract (add v 10) 10
 	--assert v = #(u8![1 2 3 4])
-	1 + v
+	v: 1 + v
 	--assert v = #(u8![2 3 4 5])
-	-1.0 + v
+	v: -1.0 + v
 	--assert v = #(u8![1 2 3 4])
 
 	v: #(i8![1 2 3 4])
-	--assert (v + 125) = #(i8![126 127 -128 -127])
-	--assert (v - 125) = #(i8![1 2 3 4])
+	--assert (v: v + 125) = #(i8![126 127 -128 -127])
+	--assert (v: v - 125) = #(i8![1 2 3 4])
 
 --test-- "VECTOR 8bit integer multiply"
 	v: #(u8![1 2 3 4])
-	--assert (v * 4) = #(u8![4 8 12 16])
+	--assert (v: v * 4) = #(u8![4 8 12 16])
 	; the values are truncated on overflow:
-	--assert (v * 20) = #(u8![80 160 240 64]) ;64 = (16 * 20) - 256
+	--assert (v: v * 20) = #(u8![80 160 240 64]) ;64 = (16 * 20) - 256
 
 	v: #(i8![1 2 3 4])
-	--assert (v * 2.0) = #(i8![2 4 6 8])
+	--assert (v: v * 2.0) = #(i8![2 4 6 8])
 	; the decimal is first converted to integer (2):
-	--assert (v * 2.4) = #(i8![4 8 12 16])
-	subtract (add v 10) 10
+	--assert (v: v * 2.4) = #(i8![4 8 12 16])
+	v: divide (multiply v 2) 2
 	--assert v = #(i8![4 8 12 16])
 
 --test-- "VECTOR 16bit integer multiply"
 	v: #(u16![1 2 3 4])
-	--assert (v * 4)  = #(u16![4 8 12 16])
-	--assert (v * 20) = #(u16![80 160 240 320])
-	multiply v 2
+	--assert (v: v * 4)  = #(u16![4 8 12 16])
+	--assert (v: v * 20) = #(u16![80 160 240 320])
+	v: multiply v 2
 	--assert v = #(u16![160 320 480 640])
 
 	v: #(u16![1 2 3 4])
-	--assert (10   * copy v) = #(u16![10 20 30 40])
-	--assert (10.0 * copy v) = #(u16![10 20 30 40])
+	--assert (10   * v) = #(u16![10 20 30 40])
+	--assert (10.0 * v) = #(u16![10 20 30 40])
 
 	; the values are truncated on overflow:
 	v: #(u16![1 2 3 4])
-	--assert (v * 10000) = #(u16![10000 20000 30000 40000])
-	--assert (v * 10.0)  = #(u16![34464 3392 37856 6784])
+	--assert (v: v * 10000) = #(u16![10000 20000 30000 40000])
+	--assert (v: v * 10.0)  = #(u16![34464 3392 37856 6784])
 
 --test-- "VECTOR 16bit integer divide"
 	v: #(u16![80 160 240 320])
-	v / 20 / 2
-	divide v 2
+	v: v / 20 / 2
+	v: divide v 2
 	--assert v = #(u16![1 2 3 4])
 	--assert error? try [10 / v]
 	--assert error? try [ v / 0] 
 
 --test-- "VECTOR 32bit decimal add/subtract"
 	v: #(f32![1 2 3 4])
-	--assert (v + 200) = #(f32![201 202 203 204])
-	--assert (v + 0.5) = #(f32![201.5 202.5 203.5 204.5])
+	--assert (v: v + 200) = #(f32![201 202 203 204])
+	--assert (v: v + 0.5) = #(f32![201.5 202.5 203.5 204.5])
 	; notice the precision lost with 32bit decimal value:
-	v - 0.1
+	v: v - 0.1
 	--assert 2013 = to integer! 10 * v/1 ; result is not 201.4 as would be with 64bit
 
 --test-- "VECTOR 64bit decimal add/subtract"
 	v: #(f64![1 2 3 4])
-	--assert (v + 200) = #(f64![201 202 203 204])
-	--assert (v + 0.5) = #(f64![201.5 202.5 203.5 204.5])
-	--assert (v - 0.1) = #(f64![201.4 202.4 203.4 204.4])
+	--assert (v: v + 200) = #(f64![201 202 203 204])
+	--assert (v: v + 0.5) = #(f64![201.5 202.5 203.5 204.5])
+	--assert (v: v - 0.1) = #(f64![201.4 202.4 203.4 204.4])
 
 --test-- "VECTOR 64bit decimal multiply/divide"
 	v: #(f64![1 2 3 4])
-	--assert (v * 20.5) = #(f64![20.5 41.0 61.5 82.0])
-	--assert (v / 20.5) = #(f64![1.0 2.0 3.0 4.0])
+	--assert (v: v * 20.5) = #(f64![20.5 41.0 61.5 82.0])
+	--assert (v: v / 20.5) = #(f64![1.0 2.0 3.0 4.0])
 
 --test-- "VECTOR math operation with vector not at head"
 	v: #(i8![1 2 3 4])
 	--assert (2 + skip v 2) = #(i8![5 6])
-	--assert v = #(i8![1 2 5 6])
+	--assert v = #(i8![1 2 3 4])
 
+--test-- "VECTOR + vector"
+	--assert (#(i8! [1 2]) + #(i8! [3 4])) = #(i8! [4 6])
+	--assert (#(i16! [1 2]) + #(i16! [3 4 5])) = #(i16! [4 6])
+	--assert (#(u32! [1 2]) + #(u32! [1 3 4] 2)) = #(u32! [4 6])
+	--assert (#(f64! [1 1 2] 2) + #(f64! [1 3 4] 2)) = #(f64! [4 6])
+
+--test-- "VECTOR - vector"
+	--assert (#(i8! [4 6]) - #(i8! [3 4])) = #(i8! [1 2])
+	--assert (#(i16! [4 6]) - #(i16! [3 4 5])) = #(i16! [1 2])
+	--assert (#(u32! [4 6]) - #(u32! [1 3 4] 2)) = #(u32! [1 2])
+	--assert (#(f64! [1 4 6] 2) - #(f64! [1 3 4] 2)) = #(f64! [1 2])
+
+--test-- "VECTOR * vector"
+	--assert (#(i8! [1 2]) * #(i8! [3 4])) = #(i8! [3 8])
+	--assert (#(i16! [1 2]) * #(i16! [3 4 5])) = #(i16! [3 8])
+	--assert (#(u32! [1 2]) * #(u32! [1 3 4] 2)) = #(u32! [3 8])
+	--assert (#(f64! [1 1 2] 2) * #(f64! [1 3 4] 2)) = #(f64! [3 8])
+
+--test-- "VECTOR / vector"
+	--assert (#(i8! [10 20]) / #(i8! [2 4])) = #(i8! [5 5])
+	--assert (#(i16! [10 20]) / #(i16! [2 4 5])) = #(i16! [5 5])
+	--assert (#(u32! [10 20]) / #(u32! [1 2 4] 2)) = #(u32! [5 5])
+	--assert (#(f64! [1 10 20] 2) / #(f64! [1 2 4] 2)) = #(f64! [5 5])
+
+;@@ https://github.com/Oldes/Rebol-issues/issues/2524
+;@@ https://github.com/Oldes/Rebol-issues/issues/2617
+--test-- "VECTOR or"
+	--assert (#(int8!  [1 2 3 4]) or 2) == #(int8!  [3 2 3 6])
+	--assert (#(int16! [1 2 3 4]) or 2) == #(int16! [3 2 3 6])
+	--assert (#(int32! [1 2 3 4]) or 2) == #(int32! [3 2 3 6])
+	--assert (#(int64! [1 2 3 4]) or 2) == #(int64! [3 2 3 6])
+	--assert (#(uint8!  [1 2 3 4]) or 2) == #(uint8!  [3 2 3 6])
+	--assert (#(uint16! [1 2 3 4]) or 2) == #(uint16! [3 2 3 6])
+	--assert (#(uint32! [1 2 3 4]) or 2) == #(uint32! [3 2 3 6])
+	--assert (#(uint64! [1 2 3 4]) or 2) == #(uint64! [3 2 3 6])
+	--assert all [error? e: try [#(float32! [1 2]) or 1]  e/id = 'not-related]
+	--assert all [error? e: try [#(float64! [1 2]) or 1]  e/id = 'not-related]
+
+--test-- "VECTOR and"
+	--assert (#(int8!  [1 2 3 4]) and 10) == #(int8!  [0 2 2 0])
+	--assert (#(int16! [1 2 3 4]) and 10) == #(int16! [0 2 2 0])
+	--assert (#(int32! [1 2 3 4]) and 10) == #(int32! [0 2 2 0])
+	--assert (#(int64! [1 2 3 4]) and 10) == #(int64! [0 2 2 0])
+	--assert (#(uint8!  [1 2 3 4]) and 10) == #(uint8!  [0 2 2 0])
+	--assert (#(uint16! [1 2 3 4]) and 10) == #(uint16! [0 2 2 0])
+	--assert (#(uint32! [1 2 3 4]) and 10) == #(uint32! [0 2 2 0])
+	--assert (#(uint64! [1 2 3 4]) and 10) == #(uint64! [0 2 2 0])
+	--assert all [error? e: try [#(float32! [1 2]) and 1]  e/id = 'not-related]
+	--assert all [error? e: try [#(float64! [1 2]) and 1]  e/id = 'not-related]
+
+--test-- "VECTOR xor"
+	--assert (#(int8!  [1 2 3 4]) xor 2) == #(int8!  [3 0 1 6])
+	--assert (#(int16! [1 2 3 4]) xor 2) == #(int16! [3 0 1 6])
+	--assert (#(int32! [1 2 3 4]) xor 2) == #(int32! [3 0 1 6])
+	--assert (#(int64! [1 2 3 4]) xor 2) == #(int64! [3 0 1 6])
+	--assert (#(uint8!  [1 2 3 4]) xor 2) == #(uint8!  [3 0 1 6])
+	--assert (#(uint16! [1 2 3 4]) xor 2) == #(uint16! [3 0 1 6])
+	--assert (#(uint32! [1 2 3 4]) xor 2) == #(uint32! [3 0 1 6])
+	--assert (#(uint64! [1 2 3 4]) xor 2) == #(uint64! [3 0 1 6])
+	--assert all [error? e: try [#(float32! [1 2]) xor 2]  e/id = 'not-related]
+	--assert all [error? e: try [#(float64! [1 2]) xor 2]  e/id = 'not-related]
+
+--test-- "VECTOR remainder"
+	--assert (#(int8!  [1 2 3 4]) % 2) == #(int8!  [1 0 1 0])
+	--assert (#(int16! [1 2 3 4]) % 2) == #(int16! [1 0 1 0])
+	--assert (#(int32! [1 2 3 4]) % 2) == #(int32! [1 0 1 0])
+	--assert (#(int64! [1 2 3 4]) % 2) == #(int64! [1 0 1 0])
+	--assert (#(uint8!  [1 2 3 4]) % 2) == #(uint8!  [1 0 1 0])
+	--assert (#(uint16! [1 2 3 4]) % 2) == #(uint16! [1 0 1 0])
+	--assert (#(uint32! [1 2 3 4]) % 2) == #(uint32! [1 0 1 0])
+	--assert (#(uint64! [1 2 3 4]) % 2) == #(uint64! [1 0 1 0])
+	--assert (#(float32! [1 2 3 4]) % 2) == #(float32! [1 0 1 0])
+	--assert (#(float64! [1 2 3 4]) % 2) == #(float64! [1 0 1 0])
+--test-- "VECTOR remainder with zero"
+	--assert all [error? e: try [#(int8! [1 2]) % 0]  e/id = 'zero-divide]
+	--assert all [error? e: try [#(float32! [1 2]) % 0]  e/id = 'zero-divide]
+	--assert all [error? e: try [#(float64! [1 2]) % 0]  e/id = 'zero-divide]
+
+--test-- "VECTOR or vector"
+	--assert (#(int8!  [1 2 3 4]) or #(i8! [5 6 7 8])) == #(int8! [5 6 7 12])
+	--assert (#(int16! [1 2 3 4]) or #(i16! [5 6 7 8])) == #(int16! [5 6 7 12])
+	--assert (#(int32! [1 2 3 4]) or #(i32! [5 6 7 8])) == #(int32! [5 6 7 12])
+	--assert (#(int64! [1 2 3 4]) or #(i64! [5 6 7 8])) == #(int64! [5 6 7 12])
+	--assert (#(uint8!  [1 2 3 4]) or #(u8! [5 6 7 8])) == #(uint8!  [5 6 7 12])
+	--assert (#(uint16! [1 2 3 4]) or #(u16! [5 6 7 8])) == #(uint16! [5 6 7 12])
+	--assert (#(uint32! [1 2 3 4]) or #(u32! [5 6 7 8])) == #(uint32! [5 6 7 12])
+	--assert (#(uint64! [1 2 3 4]) or #(u64! [5 6 7 8])) == #(uint64! [5 6 7 12])
+	--assert all [error? e: try [#(float32! [1 2]) or #(float32! [1 2])]  e/id = 'not-related]
+	--assert all [error? e: try [#(float64! [1 2]) or #(float64! [1 2])]  e/id = 'not-related]
+
+--test-- "VECTOR and vector"
+	--assert (#(int8!  [1 2 3 4]) and #(i8! [5 6 7 8])) == #(int8!  [1 2 3 0])
+	--assert (#(int16! [1 2 3 4]) and #(i16! [5 6 7 8])) == #(int16! [1 2 3 0])
+	--assert (#(int32! [1 2 3 4]) and #(i32! [5 6 7 8])) == #(int32! [1 2 3 0])
+	--assert (#(int64! [1 2 3 4]) and #(i64! [5 6 7 8])) == #(int64! [1 2 3 0])
+	--assert (#(uint8!  [1 2 3 4]) and #(u8! [5 6 7 8])) == #(uint8!  [1 2 3 0])
+	--assert (#(uint16! [1 2 3 4]) and #(u16! [5 6 7 8])) == #(uint16! [1 2 3 0])
+	--assert (#(uint32! [1 2 3 4]) and #(u32! [5 6 7 8])) == #(uint32! [1 2 3 0])
+	--assert (#(uint64! [1 2 3 4]) and #(u64! [5 6 7 8])) == #(uint64! [1 2 3 0])
+	--assert all [error? e: try [#(float32! [1 2]) and #(float32! [1 2])]  e/id = 'not-related]
+	--assert all [error? e: try [#(float64! [1 2]) and #(float64! [1 2])]  e/id = 'not-related]
+
+--test-- "VECTOR xor vector"
+	--assert (#(int8!  [1 2 3 4]) xor #(i8! [5 6 7 8])) == #(int8! [4 4 4 12])
+	--assert (#(int16! [1 2 3 4]) xor #(i16! [5 6 7 8])) == #(int16! [4 4 4 12])
+	--assert (#(int32! [1 2 3 4]) xor #(i32! [5 6 7 8])) == #(int32! [4 4 4 12])
+	--assert (#(int64! [1 2 3 4]) xor #(i64! [5 6 7 8])) == #(int64! [4 4 4 12])
+	--assert (#(uint8!  [1 2 3 4]) xor #(u8! [5 6 7 8])) == #(uint8!  [4 4 4 12])
+	--assert (#(uint16! [1 2 3 4]) xor #(u16! [5 6 7 8])) == #(uint16! [4 4 4 12])
+	--assert (#(uint32! [1 2 3 4]) xor #(u32! [5 6 7 8])) == #(uint32! [4 4 4 12])
+	--assert (#(uint64! [1 2 3 4]) xor #(u64! [5 6 7 8])) == #(uint64! [4 4 4 12])
+	--assert all [error? e: try [#(float32! [1 2]) xor #(float32! [1 2])]  e/id = 'not-related]
+	--assert all [error? e: try [#(float64! [1 2]) xor #(float64! [1 2])]  e/id = 'not-related]
+
+--test-- "VECTOR remainder vector"
+	--assert (#(int8!  [1 2 3 4]) % #(i8! [2 2 2 2])) == #(int8!  [1 0 1 0])
+	--assert (#(int16! [1 2 3 4]) % #(i16! [2 2 2 2])) == #(int16! [1 0 1 0])
+	--assert (#(int32! [1 2 3 4]) % #(i32! [2 2 2 2])) == #(int32! [1 0 1 0])
+	--assert (#(int64! [1 2 3 4]) % #(i64! [2 2 2 2])) == #(int64! [1 0 1 0])
+	--assert (#(uint8!  [1 2 3 4]) % #(u8! [2 2 2 2])) == #(uint8!  [1 0 1 0])
+	--assert (#(uint16! [1 2 3 4]) % #(u16! [2 2 2 2])) == #(uint16! [1 0 1 0])
+	--assert (#(uint32! [1 2 3 4]) % #(u32! [2 2 2 2])) == #(uint32! [1 0 1 0])
+	--assert (#(uint64! [1 2 3 4]) % #(u64! [2 2 2 2])) == #(uint64! [1 0 1 0])
+	--assert (#(float32! [1 2 3 4]) % #(float32! [2 2 2 2])) == #(float32! [1 0 1 0])
+	--assert (#(float64! [1 2 3 4]) % #(float64! [2 2 2 2])) == #(float64! [1 0 1 0])
 ===end-group===
 
 
@@ -804,6 +947,224 @@ Rebol [
 		--assert  all [
 			error? e: try [sort/compare #(i8!  [2 4 1 3]) func[a b][a < b]]
 			e/id = 'feature-na
+		]
+===end-group===
+
+
+===start-group=== "Vector modification actions"
+	;@@ https://github.com/Oldes/Rebol-issues/issues/1326
+	;@@ https://github.com/Oldes/Rebol-issues/issues/2527
+	--test-- "APPEND vector number"
+		--assert (append #(i8! [1 2]) 3) == #(i8! [1 2 3])
+		--assert (append next #(i16! [1 2]) 3) == #(i16! [1 2 3])
+		--assert (append #(i32! [1 2]) 3.5) == #(i32! [1 2 3])
+		--assert (append/part #(i64! [1 2]) 3 2) == #(i64! [1 2 3])
+		--assert (append/dup #(f32! [1 2]) 3 2) == #(f32! [1 2 3 3])
+	
+	--test-- "APPEND vector block"
+		--assert (append #(i8! [1 2]) [3 4]) == #(i8! [1 2 3 4])
+		--assert (append #(i16! [1 2]) [3.5 4.1]) == #(i16! [1 2 3 4])
+		--assert (append next #(i32! [1 2]) [3 4]) == #(i32! [1 2 3 4])
+		--assert (append/part #(i64! [1 2]) [3 4] 1) == #(i64! [1 2 3])
+		--assert (append/part #(f32! [1 2]) [3 4] 3) == #(f32! [1 2 3 4])
+		--assert (append/dup  #(f64! [1 2]) [3 4] 2) == #(f64! [1 2 3 4 3 4])
+
+	--test-- "APPEND vector vector"
+		--assert (append #(i8! [1 2]) #(i8! [3 4])) == #(i8! [1 2 3 4])
+		--assert (append #(i16! [1 2]) #(f32! [3.5 4.1])) == #(i16! [1 2 3 4])
+		--assert (append next #(i32! [1 2]) #(i8! [3 4])) == #(i32! [1 2 3 4])
+		--assert (append/part #(i64! [1 2]) #(i8! [3 4]) 1) == #(i64! [1 2 3])
+		--assert (append/part #(f32! [1 2]) #(i8! [3 4]) 3) == #(f32! [1 2 3 4])
+		--assert (append/dup  #(f64! [1 2]) #(i8! [3 4]) 2) == #(f64! [1 2 3 4 3 4])
+
+	--test-- "APPEND vector binary"
+		--assert (append #(i8! [1 2]) #{0304}) == #(i8! [1 2 3 4])
+		--assert (append #(i16! [1 2]) #{03000400})   == #(i16! [1 2 3 4])
+		--assert (append next #(i8! [1 2]) #{0304})   == #(i8! [1 2 3 4])
+		--assert (append/part #(i8! [1 2]) #{0304} 1) == #(i8! [1 2 3])
+		--assert (append/part #(i8! [1 2]) #{0304} 3) == #(i8! [1 2 3 4])
+		--assert (append/dup  #(i8! [1 2]) #{0304} 2) == #(i8! [1 2 3 4 3 4])
+	--test-- "APPEND vector binary (invalid)"
+		--assert all [
+			error? e: try [append #(i16! [1 2]) #{03}]
+			e/id = 'invalid-data
+			e/arg1 = #{03}
+		]
+		--assert all [
+			error? e: try [append/part #(i16! [1 2]) #{0304} 1]
+			e/id = 'invalid-data
+			e/arg1 = #{0304}
+		]
+
+	--test-- "INSERT vector number"
+		--assert all [
+			(insert v: #(i8! [1 2]) 3) == #(i8! [1 2])
+			v == #(i8! [3 1 2])
+		]
+		--assert all [
+			(insert next v: #(i8! [1 2]) 3) == #(i8! [2])
+			v == #(i8! [1 3 2])
+		]
+		--assert all [
+			(insert v: #(i8! [1 2]) 3.5) == #(i8! [1 2])
+			v == #(i8! [3 1 2])
+		]
+		--assert all [
+			(insert/part v: #(i8! [1 2]) 3 2) == #(i8! [1 2])
+			v == #(i8! [3 1 2])
+		]
+		--assert all [
+			(insert/dup v: #(i8! [1 2]) 3 2) == #(i8! [1 2])
+			v == #(i8! [3 3 1 2])
+		]
+
+	--test-- "INSERT vector block"
+		--assert all [
+			(insert v: #(i8! [1 2]) [3 4]) == #(i8! [1 2])
+			v == #(i8! [3 4 1 2])
+		]
+		--assert all [
+			(insert v: #(i8! [1 2]) [3.5 4.1]) == #(i8! [1 2])
+			v == #(i8! [3 4 1 2])
+		]
+		--assert all [
+			(insert next v: #(i8! [1 2]) [3 4]) == #(i8! [2])
+			v == #(i8! [1 3 4 2])
+		]
+		--assert all [
+			(insert/part v: #(i8! [1 2]) [3 4] 1) == #(i8! [1 2])
+			v == #(i8! [3 1 2])
+		]
+		--assert all [
+			(insert/part v: #(i8! [1 2]) [3 4] 3) == #(i8! [1 2])
+			v == #(i8! [3 4 1 2])
+		]
+		--assert all [
+			(insert/dup v: #(i8! [1 2]) [3 4] 2) == #(i8! [1 2])
+			v == #(i8! [3 4 3 4 1 2])
+		]
+
+	--test-- "INSERT vector vector"
+		--assert all [
+			(insert v: #(i8! [1 2]) #(i8! [3 4])) == #(i8! [1 2])
+			v == #(i8! [3 4 1 2])
+		]
+		--assert all [
+			(insert v: #(i16! [1 2]) #(f32! [3.5 4.1])) == #(i16! [1 2])
+			v == #(i16! [3 4 1 2])
+		]
+		--assert all [
+			(insert next v: #(i32! [1 2]) #(i8! [3 4])) == #(i32! [2])
+			v == #(i32! [1 3 4 2])
+		]
+		--assert all [
+			(insert/part v: #(i64! [1 2]) #(i8! [3 4]) 1) == #(i64! [1 2])
+			v == #(i64! [3 1 2])
+		]
+		--assert all [
+			(insert/part v: #(f32! [1 2]) #(i8! [3 4]) 3) == #(f32! [1 2])
+			v == #(f32! [3 4 1 2])
+		]
+		--assert all [
+			(insert/dup v: #(f64! [1 2]) #(i8! [3 4]) 2) == #(f64! [1 2])
+			v == #(f64! [3 4 3 4 1 2])
+		]
+
+	--test-- "CHANGE vector number"
+		--assert all [
+			(change v: #(i8! [1 2]) 3) == #(i8! [2])
+			v == #(i8! [3 2])
+		]
+		--assert all [
+			(change next v: #(i8! [1 2 3]) 4) == #(i8! [3])
+			v == #(i8! [1 4 3])
+		]
+		--assert all [
+			(change/part v: #(i8! [1 2]) 3 1) == #(i8! [2])
+			v == #(i8! [3 2])
+		]
+		--assert all [
+			(change/part v: #(i8! [1 2]) 3 3) == #(i8! [])
+			v == #(i8! [3])
+		]
+		--assert all [
+			(change/dup v: #(i8! [1 2]) 3 2) == #(i8! [])
+			v == #(i8! [3 3])
+		]
+
+	--test-- "CHANGE vector block"
+		--assert all [
+			(change v: #(i8! [1 2]) [3 4]) == #(i8! [])
+			v == #(i8! [3 4])
+		]
+		--assert all [
+			(change v: #(i8! [1 2]) [3.5 4.1]) == #(i8! [])
+			v == #(i8! [3 4])
+		]
+		--assert all [
+			(change v: #(i8! [1 2 3]) [3 4]) == #(i8! [3])
+			v == #(i8! [3 4 3])
+		]
+		--assert all [
+			(change next v: #(i8! [1 2 3]) [3 4]) == #(i8! [])
+			v == #(i8! [1 3 4])
+		]
+		--assert all [
+			(change/part v: #(i8! [1 2]) [3 4] 1) == #(i8! [2])
+			v == #(i8! [3 4 2])
+		]
+		--assert all [
+			(change/part v: #(i8! [1 2]) [3 4] 3) == #(i8! [])
+			v == #(i8! [3 4])
+		]
+		--assert all [
+			(change/dup v: #(i8! [1 2]) [3 4] 2) == #(i8! [])
+			v == #(i8! [3 4 3 4])
+		]
+		--assert all [
+			(change/dup v: #(i8! [1 2 3 4 5]) [6 7] 2) == #(i8! [5])
+			v == #(i8! [6 7 6 7 5])
+		]
+
+	--test-- "CHANGE vector vector"
+		--assert all [
+			(change v: #(i8! [1 2]) #(i8! [3 4])) == #(i8! [])
+			v == #(i8! [3 4])
+		]
+		--assert all [
+			(change v: #(i16! [1 2]) #(f32! [3.5 4.1])) == #(i16! [])
+			v == #(i16! [3 4])
+		]
+		--assert all [
+			(change v: #(i32! [1 2 3]) #(i8! [3 4])) == #(i32! [3])
+			v == #(i32! [3 4 3])
+		]
+		--assert all [
+			(change next v: #(i64! [1 2 3]) #(i8! [3 4])) == #(i64! [])
+			v == #(i64! [1 3 4])
+		]
+		--assert all [
+			(change/part v: #(f32! [1 2]) #(i8! [3 4]) 1) == #(f32! [2])
+			v == #(f32! [3 4 2])
+		]
+		--assert all [
+			(change/part v: #(f64! [1 2]) #(i8! [3 4]) 3) == #(f64! [])
+			v == #(f64! [3 4])
+		]
+		--assert all [
+			(change/dup v: #(i8! [1 2]) #(u16! [3 4]) 2) == #(i8! [])
+			v == #(i8! [3 4 3 4])
+		]
+		--assert all [
+			(change/dup v: #(i16! [1 2 3 4 5]) #(u32! [6 7]) 2) == #(i16! [5])
+			v == #(i16! [6 7 6 7 5])
+		]
+
+	--test-- "CLEAR vector"
+		--assert all [
+			v: #(i8! [1 2])
+			(clear v) == #(i8! [])
+			empty? v
 		]
 ===end-group===
 

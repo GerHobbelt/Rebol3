@@ -49,6 +49,9 @@ Rebol [
 			e/id = 'invalid-utf
 			e/arg1 = #{C500}
 		]
+		;; surrogates...
+		--assert "𝄢" == to string! #{EDA0B4EDB4A2}
+		
  	--test-- "to block!"
 		--assert [šáh 🙂] == make block! "šáh 🙂"
 	--test-- "to char!"
@@ -275,7 +278,60 @@ Rebol [
 	--test-- "to-hex"
 		--assert #01F642 = to-hex #"🙂"
 		--assert #01F642 = to-hex #"^(01F642)"
-		
+
+	--test-- "difference"
+		--assert (difference "ač" "čbš") == "abš"
+		--assert (difference "ač🙂" "čbš") == "a🙂bš"
+		--assert (difference "ač🙂" "🙂čbš") == "abš"
+		--assert (difference "ab" "čbš🙂") == "ačš🙂"
+		--assert (difference "čbš🙂" "ab") == "čš🙂a"
+	--test-- "difference/skip"
+		--assert (difference/skip "ač" "čbš" 2) == "aččbš"
+		--assert (difference/skip "ač" "čbčbš" 2) == "aččbš"
+		--assert (difference/skip "a🙂" "čbčba🙂" 2) == "čb"
+
+	--test-- "union"
+		--assert (union "ač" "čbš") == "ačbš"
+		--assert (union "ač🙂" "čbš") == "ač🙂bš"
+		--assert (union "ač🙂" "🙂čbš") == "ač🙂bš"
+		--assert (union "ab" "čbš🙂") == "abčš🙂"
+		--assert (union "čbš🙂" "ab") == "čbš🙂a"
+	--test-- "union/skip"
+		--assert "ábča"   = unique/skip "ábábča" 2
+		--assert "ábabca" = unique/skip s: "ábabcaába" 3
+		--assert s = "ábabcaába"
+
+	--test-- "exclude"
+		--assert (exclude "ač" "čbš") == "a"
+		--assert (exclude "ač🙂" "čbš") == "a🙂"
+		--assert (exclude "ač🙂" "🙂čbš") == "a"
+		--assert (exclude "ab" "čbš🙂") == "a"
+		--assert (exclude "čbš🙂" "ab") == "čš🙂"
+	--test-- "exclude/skip"
+		--assert (exclude/skip "aččb" "čbš" 2) == "ač"
+		--assert (exclude/skip "aččb" "čbčbš" 2) == "ač"
+		--assert (exclude/skip "a🙂" "čbčba🙂" 2) == ""
+		--assert (exclude/skip "a🙂🙂a" "čbčba🙂" 2) == "🙂a"
+
+	--test-- "intersect"
+		--assert (intersect "ač" "čbš") == "č"
+		--assert (intersect "ač🙂" "čbš") == "č"
+		--assert (intersect "ač🙂" "🙂čbš") == "č🙂"
+		--assert (intersect "ab" "čbš🙂") == "b"
+		--assert (intersect "čbš🙂" "ab🙂") == "b🙂"
+	--test-- "intersect/skip"
+		--assert (intersect/skip "aččb" "čbš" 2) == "čb"
+		--assert (intersect/skip "aččb" "čbčbš" 2) == "čb"
+		--assert (intersect/skip "a🙂" "čbčba🙂" 2) == "a🙂"
+		--assert (intersect/skip "a🙂🙂a" "čbčba🙂" 2) == "a🙂"
+
+	--test-- "unique"
+		--assert (unique "ača") == "ač"
+		--assert (unique "ač🙂🙂č") == "ač🙂"
+	--test-- "unique/skip"
+		--assert (unique/skip "baaččbač" 2) == "baaččb"
+		--assert (unique/skip "b🙂aččb🙂č" 2) == "b🙂aččb🙂č"
+
 ===end-group===
 
 
@@ -288,6 +344,24 @@ Rebol [
 	--test-- "ref!"
 		--assert @šč == transcode/one #{40C5A1C48D}
 		--assert @🙂b == transcode/one #{40F09F998262}
+
+	--test-- "string with surrogates"
+		;; UTF-16 surrogates are not allowed in UTF-8
+		;; so this is not a valid string: "^(D834)"
+		--assert all [
+			error? e: transcode/one/error #{225E28443833342922}
+			e/id = 'invalid
+		]
+		--assert all [
+			error? e: transcode/one/error #{225E2844383334295E28444432322922} ;; "^(D834)^(DD22)"
+			e/id = 'invalid
+		]
+	--test-- "string with a char over Unicode range"
+		--assert all [
+			error? e: transcode/one/error #{225E28313130303030292922} ;; "^(110000)"
+			e/id = 'invalid
+		]
+
 ===end-group===
 
 
@@ -410,7 +484,7 @@ Rebol [
 		--assert #{C3A1} == append #{} #"á"
 		--assert #{F09F9982} == append #{} #"🙂"
 		--assert #{C3A1F09F9982} == append #{} "á🙂"
-		--assert #{C3} == append/part #{} "á" 1
+		--assert #{C3A1} == append/part #{} "á" 1
 
 	--test-- "insert string"
 		--assert "šabc" == head insert "abc" "š"
@@ -422,6 +496,18 @@ Rebol [
 		--assert "🙂ábč" == head insert "ábč" "🙂"
 		--assert "ášbč" == head insert next "ábč" "š"
 		--assert "á🙂bč" == head insert next "ábč" "🙂"
+
+	--test-- "insert/part string"
+	;@@ https://github.com/Oldes/Rebol-issues/issues/2659
+		--assert all [(insert/part o: "éee" "a" 1) == "éee"  o == "aéee"]
+		--assert all [(insert/part o: "éee" "á" 1) == "éee" o == "áéee"]
+		--assert all [(insert/part o: "éee" "🙂" 1) == "éee"  o == "🙂éee"]
+		--assert all [(insert/part o: "éee" "aaa" 2) == "éee"  o == "aaéee"]
+		--assert all [(insert/part o: "éee" "ááá" 2) == "éee"  o == "ááéee"]
+		--assert all [(insert/part o: "éee" "🙂🙂" 2) == "éee"  o == "🙂🙂éee"]
+		--assert all [(insert/part o: "éee" "a" 20) == "éee"  o == "aéee"]
+		--assert all [(insert/part o: "éee" "á" 20) == "éee"  o == "áéee"]
+		--assert all [(insert/part o: "éee" "🙂" 20) == "éee"  o == "🙂éee"]
 
 	--test-- "insert char"
 		--assert "šábč" == head insert "ábč" #"š"
@@ -457,6 +543,18 @@ Rebol [
 		--assert all [(change/dup o: "🙂bc" "a" 2) == "c"  o == "aac"]
 		--assert all [(change/dup o: "🙂bc" "a" 3) == ""   o == "aaa"]
 		--assert all [(change/dup o: "🙂bc" "a" 4) == ""   o == "aaaa"]
+
+	--test-- "change/part string!"
+	;@@ https://github.com/Oldes/Rebol-issues/issues/2659
+		--assert all [(change/part o: "éee" "a" 1) == "ee"  o == "aee"]
+		--assert all [(change/part o: "éee" "á" 1) == "ee"  o == "áee"]
+		--assert all [(change/part o: "éee" "🙂" 1) == "ee"  o == "🙂ee"]
+		--assert all [(change/part o: "éee" "a" 2) == "e"  o == "ae"]
+		--assert all [(change/part o: "éee" "á" 2) == "e"  o == "áe"]
+		--assert all [(change/part o: "éee" "🙂" 2) == "e"  o == "🙂e"]
+		--assert all [(change/part o: "éee" "a" 20) == ""  o == "a"]
+		--assert all [(change/part o: "éee" "á" 20) == ""  o == "á"]
+		--assert all [(change/part o: "éee" "🙂" 20) == ""  o == "🙂"]
 
 	--test-- "change char!"
 		--assert all [(change o: "---" #"╔") == "--"  o == "╔--"]
@@ -680,6 +778,9 @@ Rebol [
 		--assert parse "<á>" [<á>]
 		--assert parse "<á🙂>" [thru <á🙂>]
 		--assert parse "<á🙂>" [to <á🙂> to end]
+
+	--test-- "parse skip"
+		--assert parse "핕" [skip]
 
 
 ===end-group===

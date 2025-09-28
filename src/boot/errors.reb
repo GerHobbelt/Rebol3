@@ -132,6 +132,8 @@ Script: [
 	invalid-handle:     {invalid handle}
 	invalid-value-for:  [{invalid value} :arg1 {for:} :arg2]
 	handle-exists:      [{handle already exists under id} :arg1 "and have different size"]
+
+	vector-not-compatible: [{Vectors not compatible for operation}]
 ]
 
 Math: [
@@ -200,6 +202,7 @@ Access: [
 	process-not-found: 	[{process not found:} :arg1]
 
 	invalid-utf:		[{invalid Unicode encoding:} :arg1]
+	invalid-char:		[{invalid UTF-8 character:} :arg1]
 
 ]
 
