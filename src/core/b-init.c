@@ -696,7 +696,7 @@ extern const REBYTE Str_Banner[];
 	}
 
 	if (codi->action == CODI_DECODE) {
-		codi->other = (void*)Decode_UTF_String(codi->data, codi->len, -1, TRUE, FALSE);
+		codi->other = (void*)Decode_UTF_String(codi->data, codi->len, -1, TRUE, &codi->error);
 		return CODI_STRING;
 	}
 
@@ -781,12 +781,13 @@ extern const REBYTE Str_Banner[];
 }
 
 
-static void Set_Option_String(REBCHR *str, REBCNT field)
+static void Set_Option_String(REBYTE *str, REBCNT field)
 {
 	REBVAL *val;
 	if (str) {
 		val = Get_System(SYS_OPTIONS, field);
-		Set_String(val, Copy_OS_Str(str, (REBINT)LEN_STR(str)));
+		// The string is UTF-8 encoded even on Windows!
+		Set_String(val, Copy_Str(str, LEN_BYTES(str)));
 	}
 }
 
@@ -813,13 +814,7 @@ static void Set_Option_File(REBCNT field, REBYTE* src, REBOOL dir )
 {
 	REBSER *ser;
 	REBVAL *val;
-	if (OS_WIDE) {
-		ser = To_REBOL_Path(src, 0, OS_WIDE, dir);
-	}
-	else {
-		ser = Decode_UTF_String(src, LEN_BYTES(src), 8, FALSE, FALSE);
-		ser = To_REBOL_Path(BIN_DATA(ser), BIN_LEN(ser), (REBOOL)!BYTE_SIZE(ser), dir);
-	}
+	ser = To_REBOL_Path(src, UNKNOWN, 0, dir);
 	val = Get_System(SYS_OPTIONS, field);
 	Set_Series(REB_FILE, val, ser);
 }
@@ -864,7 +859,7 @@ static void Set_Option_File(REBCNT field, REBYTE* src, REBOOL dir )
 	val = Get_System(SYS_CATALOG, CAT_BOOT_FLAGS);
 	for (val = VAL_BLK(val); NOT_END(val); val++) {
 		VAL_CLR_LINE(val);
-		if (rargs->options & n) Append_Val(ser, val); 
+		if (rargs->options & n) Append_Val(ser, val);
 		n <<= 1;
 	}
 	// last value is always TRUE, so it's possible to use just *path* instead of `find`
@@ -878,6 +873,10 @@ static void Set_Option_File(REBCNT field, REBYTE* src, REBOOL dir )
 	// For compatibility:
 	if (rargs->options & RO_QUIET) {
 		val = Get_System(SYS_OPTIONS, OPTIONS_QUIET);
+		SET_TRUE(val);
+	}
+	if (rargs->options & RO_NO_COLOR) {
+		val = Get_System(SYS_OPTIONS, OPTIONS_NO_COLOR);
 		SET_TRUE(val);
 	}
 
@@ -1165,9 +1164,11 @@ static void Set_Option_File(REBCNT field, REBYTE* src, REBOOL dir )
 		Free_Series(VAL_SERIES(TASK_STACK));
 		Free_Series(VAL_SERIES(TASK_BUF_EMIT));
 		Free_Series(VAL_SERIES(TASK_BUF_WORDS));
-		Free_Series(VAL_SERIES(TASK_BUF_UTF8));
+		Free_Series(VAL_SERIES(TASK_BUF_SCAN));
+//		Free_Series(VAL_SERIES(TASK_BUF_UTF8));
+		Free_Series(VAL_SERIES(TASK_BUF_UCS2));
 		Free_Series(VAL_SERIES(TASK_BUF_PRINT));
-		Free_Series(VAL_SERIES(TASK_BUF_FORM));
+//		Free_Series(VAL_SERIES(TASK_BUF_FORM));
 		Free_Series(VAL_SERIES(TASK_BUF_MOLD));
 		Free_Series(VAL_SERIES(TASK_MOLD_LOOP));
 	}

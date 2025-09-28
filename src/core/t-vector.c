@@ -30,6 +30,51 @@
 
 #include "sys-core.h"
 
+static const REBCNT normalized_vect_sym[29] = {
+	SYM_INT8X,     //SYM_INT8X
+	SYM_INT16X,    //SYM_INT16X
+	SYM_INT32X,    //SYM_INT32X
+	SYM_INT64X,    //SYM_INT64X
+	SYM_UINT8X,    //SYM_UINT8X
+	SYM_UINT16X,   //SYM_UINT16X
+	SYM_UINT32X,   //SYM_UINT32X
+	SYM_UINT64X,   //SYM_UINT64X
+	SYM_FLOAT8X,   //SYM_FLOAT8X
+	SYM_FLOAT16X,  //SYM_FLOAT16X
+	SYM_FLOAT32X,  //SYM_FLOAT32X
+	SYM_FLOAT64X,  //SYM_FLOAT64X
+	SYM_INT8X,     //SYM_I8X
+	SYM_INT16X,    //SYM_I16X
+	SYM_INT32X,    //SYM_I32X
+	SYM_INT64X,    //SYM_I64X
+	SYM_UINT8X,    //SYM_U8X
+	SYM_UINT16X,   //SYM_U16X
+	SYM_UINT32X,   //SYM_U32X
+	SYM_UINT64X,   //SYM_U64X
+	SYM_FLOAT8X,   //SYM_F8X
+	SYM_FLOAT16X,  //SYM_F16X
+	SYM_FLOAT32X,  //SYM_F32X
+	SYM_FLOAT64X,  //SYM_F64X
+	SYM_UINT8X,    //SYM_BYTEX
+	SYM_FLOAT16X,  //SYM_HALFX
+	SYM_FLOAT32X,  //SYM_FLOATX
+	SYM_FLOAT32X,  //SYM_SINGLEX
+	SYM_FLOAT64X,  //SYM_DOUBLEX
+
+};
+
+/***********************************************************************
+**
+*/	REBCNT Normalize_Vector_Type_Symbol(REBCNT sym)
+/*
+**		Return normalized symbol from an numeric vector type alias.
+**
+***********************************************************************/
+{
+	if (sym < SYM_INT8X || sym > SYM_DOUBLEX) return sym;
+	return normalized_vect_sym[sym - SYM_INT8X];
+}
+
 REBU64 f_to_u64(float n) {
 	union {
 		REBU64 u;
@@ -38,120 +83,231 @@ REBU64 f_to_u64(float n) {
 	t.d = n;
 	return t.u;
 }
-		
 
-REBU64 get_vect(REBCNT bits, REBYTE *data, REBCNT n)
-{
-	switch (bits) {
-	case VTSI08:
-		return (REBI64) ((i8*)data)[n];
 
-	case VTSI16:
-		return (REBI64) ((i16*)data)[n];
+typedef void (*SetterFunc)(const void *data, REBCNT n, REBVAL *val);
+typedef void (*GetterFunc)(const void *data, REBCNT n, REBVAL *val);
 
-	case VTSI32:
-		return (REBI64) ((i32*)data)[n];
+static void set_i8(const void *data, REBCNT n, REBVAL *val) { ((i8 *)data)[n] = (i8)VAL_INT64(val); }
+static void set_i16(const void *data, REBCNT n, REBVAL *val) { ((i16 *)data)[n] = (i16)VAL_INT64(val); }
+static void set_i32(const void *data, REBCNT n, REBVAL *val) { ((i32 *)data)[n] = (i32)VAL_INT64(val); }
+static void set_i64(const void *data, REBCNT n, REBVAL *val) { ((i64 *)data)[n] = VAL_INT64(val); }
+static void set_u8(const void *data, REBCNT n, REBVAL *val) { ((u8 *)data)[n] = (u8)VAL_UNT64(val); }
+static void set_u16(const void *data, REBCNT n, REBVAL *val) { ((u16 *)data)[n] = (u16)VAL_UNT64(val); }
+static void set_u32(const void *data, REBCNT n, REBVAL *val) { ((u32 *)data)[n] = (u32)VAL_UNT64(val); }
+static void set_u64(const void *data, REBCNT n, REBVAL *val) { ((u64 *)data)[n] = VAL_UNT64(val); }
+static void set_float(const void *data, REBCNT n, REBVAL *val) { ((float *)data)[n] = (float)VAL_DECIMAL(val); }
+static void set_double(const void *data, REBCNT n, REBVAL *val) { ((double *)data)[n] = VAL_DECIMAL(val); }
 
-	case VTSI64:
-		return (REBI64) ((i64*)data)[n];
+static void get_i8(const void *data, REBCNT n, REBVAL *val)  { VAL_INT64(val) = ((i8 *)data)[n]; }
+static void get_i16(const void *data, REBCNT n, REBVAL *val) { VAL_INT64(val) = ((i16 *)data)[n]; }
+static void get_i32(const void *data, REBCNT n, REBVAL *val) { VAL_INT64(val) = ((i32 *)data)[n]; }
+static void get_i64(const void *data, REBCNT n, REBVAL *val) { VAL_INT64(val) = ((i64 *)data)[n]; }
+static void get_u8(const void *data, REBCNT n, REBVAL *val)  { VAL_UNT64(val) = ((u8 *)data)[n]; }
+static void get_u16(const void *data, REBCNT n, REBVAL *val) { VAL_UNT64(val) = ((u16 *)data)[n]; }
+static void get_u32(const void *data, REBCNT n, REBVAL *val) { VAL_UNT64(val) = ((u32 *)data)[n]; }
+static void get_u64(const void *data, REBCNT n, REBVAL *val) { VAL_UNT64(val) = ((u64 *)data)[n]; }
+static void get_float(const void *data, REBCNT n, REBVAL *val)  { VAL_UNT64(val) = f_to_u64(((float *)data)[n]); }
+static void get_double(const void *data, REBCNT n, REBVAL *val) { VAL_UNT64(val) = ((REBU64 *)data)[n]; }
 
-	case VTUI08:
-		return (REBU64) ((u8*)data)[n];
+// Comparison functions for qsort
+typedef int(*CompareFunc)(const void *a, const void *b);
+#define COMP_FUNC_BODY(type) {             \
+    type fa = *(const type *)a;   \
+	type fb = *(const type *)b;   \
+    return (fa > fb) - (fa < fb); \
+}
+// (ascending order)
+static int cmp_i8(const void *a, const void *b) { COMP_FUNC_BODY(i8) }
+static int cmp_i16(const void *a, const void *b) { COMP_FUNC_BODY(i16) }
+static int cmp_i32(const void *a, const void *b) { COMP_FUNC_BODY(i32) }
+static int cmp_i64(const void *a, const void *b) { COMP_FUNC_BODY(i64) }
+static int cmp_u8(const void *a, const void *b) { COMP_FUNC_BODY(u8) }
+static int cmp_u16(const void *a, const void *b) { COMP_FUNC_BODY(u16) }
+static int cmp_u32(const void *a, const void *b) { COMP_FUNC_BODY(u32) }
+static int cmp_u64(const void *a, const void *b) { COMP_FUNC_BODY(u64) }
+static int cmp_float(const void *a, const void *b) { COMP_FUNC_BODY(float) }
+static int cmp_double(const void *a, const void *b) { COMP_FUNC_BODY(double) }
+// reversed...
+static int cmp_i8_rev(const void *b, const void *a) { COMP_FUNC_BODY(i8) }
+static int cmp_i16_rev(const void *b, const void *a) { COMP_FUNC_BODY(i16) }
+static int cmp_i32_rev(const void *b, const void *a) { COMP_FUNC_BODY(i32) }
+static int cmp_i64_rev(const void *b, const void *a) { COMP_FUNC_BODY(i64) }
+static int cmp_u8_rev(const void *b, const void *a) { COMP_FUNC_BODY(u8) }
+static int cmp_u16_rev(const void *b, const void *a) { COMP_FUNC_BODY(u16) }
+static int cmp_u32_rev(const void *b, const void *a) { COMP_FUNC_BODY(u32) }
+static int cmp_u64_rev(const void *b, const void *a) { COMP_FUNC_BODY(u64) }
+static int cmp_float_rev(const void *b, const void *a) { COMP_FUNC_BODY(float) }
+static int cmp_double_rev(const void *b, const void *a) { COMP_FUNC_BODY(double) }
+#undef COMP_FUNC_BODY
 
-	case VTUI16:
-		return (REBU64) ((u16*)data)[n];
+// Jump table initialization
+static SetterFunc setters[VTSF64+1] = {
+	[VTSI08] = set_i8,
+	[VTSI16] = set_i16,
+	[VTSI32] = set_i32,
+	[VTSI64] = set_i64,
+	[VTUI08] = set_u8,
+	[VTUI16] = set_u16,
+	[VTUI32] = set_u32,
+	[VTUI64] = set_u64,
+	[VTSF32] = set_float,
+	[VTSF64] = set_double
+};
+static GetterFunc getters[VTSF64 + 1] = {
+	[VTSI08] = get_i8,
+	[VTSI16] = get_i16,
+	[VTSI32] = get_i32,
+	[VTSI64] = get_i64,
+	[VTUI08] = get_u8,
+	[VTUI16] = get_u16,
+	[VTUI32] = get_u32,
+	[VTUI64] = get_u64,
+	[VTSF32] = get_float,
+	[VTSF64] = get_double
+};
 
-	case VTUI32:
-		return (REBU64) ((u32*)data)[n];
+static CompareFunc compares[VTSF64 + 1] = {
+	[VTSI08] = cmp_i8,
+	[VTSI16] = cmp_i16,
+	[VTSI32] = cmp_i32,
+	[VTSI64] = cmp_i64,
+	[VTUI08] = cmp_u8,
+	[VTUI16] = cmp_u16,
+	[VTUI32] = cmp_u32,
+	[VTUI64] = cmp_u64,
+	[VTSF32] = cmp_float,
+	[VTSF64] = cmp_double
+};
+static CompareFunc compares_rev[VTSF64 + 1] = {
+	[VTSI08] = cmp_i8_rev,
+	[VTSI16] = cmp_i16_rev,
+	[VTSI32] = cmp_i32_rev,
+	[VTSI64] = cmp_i64_rev,
+	[VTUI08] = cmp_u8_rev,
+	[VTUI16] = cmp_u16_rev,
+	[VTUI32] = cmp_u32_rev,
+	[VTUI64] = cmp_u64_rev,
+	[VTSF32] = cmp_float_rev,
+	[VTSF64] = cmp_double_rev
+};
 
-	case VTUI64:
-		return (REBU64) ((i64*)data)[n];
-
-	case VTSF08:
-	case VTSF16:
-	case VTSF32:
-		return f_to_u64(((float*)data)[n]);
-	
-	case VTSF64:
-		return ((REBU64*)data)[n];
-	}
-
-	return 0;
+FORCE_INLINE
+static void get_vect(REBCNT type, REBYTE *data, REBCNT n, REBVAL *val) {
+	ASSERT1(type <= VTSF64, RP_BAD_SIZE);
+	getters[type](data, n, val);
 }
 
-void set_vect(REBCNT bits, REBYTE *data, REBCNT n, REBI64 i, REBDEC f) {
-	switch (bits) {
+FORCE_INLINE
+static REBDEC get_vect_decimal(REBCNT type, REBYTE *data, REBCNT n) {
+	ASSERT1(type <= VTSF64, RP_BAD_SIZE);
+	REBVAL val;
+	getters[type](data, n, &val);
+	if (type >= VTSF08) return VAL_DECIMAL(&val);
+	if (type <= VTUI64) return (REBDEC)VAL_INT64(&val);
+	return (REBDEC)VAL_UNT64(&val);
+}
 
-	case VTSI08:
-		((i8*)data)[n] = (i8)i;
-		break;
+FORCE_INLINE
+static void set_vect(REBCNT type, REBYTE *data, REBCNT n, REBVAL *val) {
+	ASSERT1(type <= VTSF64, RP_BAD_SIZE);
+	setters[type](data, n, val);
+}
 
-	case VTSI16:
-		((i16*)data)[n] = (i16)i;
-		break;
 
-	case VTSI32:
-		((i32*)data)[n] = (i32)i;
-		break;
+// Query functions
+typedef struct Vector_Query_Values {
+	REBLEN length;
+	REBDEC minimum;
+	REBDEC maximum;
+	REBDEC sum;
+	REBDEC mean;
+	REBDEC variance;
+	REBDEC median;
+} REBVQV;
 
-	case VTSI64:
-		((i64*)data)[n] = (i64)i;
-		break;
+static void Query_Vector_Statictics(REBSER *vect, REBVQV *out) {
+	REBLEN len = SERIES_TAIL(vect);
+	REBCNT type = VECT_TYPE(vect);
+	REBCNT n = 0;
+	REBYTE *data = SERIES_DATA(vect);
+	REBDEC num, diff;
 
-	case VTUI08:
-		((u8*)data)[n] = (u8)i;
-		break;
-
-	case VTUI16:
-		((u16*)data)[n] = (u16)i;
-		break;
-
-	case VTUI32:
-		((u32*)data)[n] = (u32)i;
-		break;
-
-	case VTUI64:
-		((i64*)data)[n] = (u64)i;
-		break;
-
-	case VTSF08:
-	case VTSF16:
-	case VTSF32:
-		((float*)data)[n] = (float)f;
-		break;
-
-	case VTSF64:
-		((double*)data)[n] = f;
-		break;
+	CLEARS(out);
+	if (len == 0) return;
+	out->length = len;
+	out->minimum = get_vect_decimal(type, data, 0);
+	out->maximum = out->minimum;
+	for (; n < len; n++) {
+		num = get_vect_decimal(type, data, n);
+		// Min/Max
+		if (num < out->minimum) out->minimum = num;
+		else if (num > out->maximum) out->maximum = num;
+		// Sum
+		out->sum += num;
 	}
+	// Mean
+	out->mean = out->sum / len;
+	// Calculate squared differences and variance
+	for (n = 0; n < len; n++) {
+		num = get_vect_decimal(type, data, n);
+		diff = num - out->mean;
+		out->variance += diff * diff;  // More efficient than pow()
+	}
+}
+static REBDEC Query_Vector_Median(REBSER *vect) {
+	REBLEN len = SERIES_TAIL(vect);
+	REBCNT type = VECT_TYPE(vect);
+	REBSER *sorted;
+	REBDEC median;
+
+	if (len == 0) return 0;
+	// Make a vector copy, because sorting modifies
+	sorted = Copy_Series(vect);
+	sorted->size = vect->size; // attributes
+	reb_qsort(SERIES_DATA(sorted), len, VECT_BYTE_SIZE(type), compares[type]);
+
+	median = get_vect_decimal(type, SERIES_DATA(sorted), len/2);
+	if (len%2 == 0) {
+		// Even number of elements
+		median = (get_vect_decimal(type, SERIES_DATA(sorted), len/2-1) + median) / 2.0;
+	}
+	Free_Series(sorted);
+	return median;
+}
+
+
+FORCE_INLINE
+static void Set_Vector_Value(REBCNT bits, REBYTE *data, REBCNT n, REBVAL *val) {
+	REBVAL num = *val; // because may be modified!
+	if (IS_DECIMAL(val)) {
+		// value is decimal
+		if (bits <= VTUI64) {
+			// but target is integer 
+			VAL_INT64(&num) = (REBI64)VAL_DECIMAL(val);
+		}
+	}
+	else if (IS_INTEGER(val) || IS_CHAR(val)) {
+		if (bits > VTUI64) {
+			VAL_DECIMAL(&num) = (REBDEC)VAL_INT64(val);
+		}
+	}
+	else Trap_Arg(val);
+	setters[bits](data, n, &num);
 }
 
 
 void Set_Vector_Row(REBSER *ser, REBVAL *blk)
 {
-//	REBCNT idx = VAL_INDEX(blk);
-	REBCNT len = VAL_LEN(blk);
 	REBVAL *val;
-	REBCNT n = 0;
+	REBLEN n = 0;
+	REBCNT len = VAL_LEN(blk);
 	REBCNT bits = VECT_TYPE(ser);
-	REBI64 i = 0;
-	REBDEC f = 0;
 
 	if (IS_BLOCK(blk)) {
 		val = VAL_BLK_DATA(blk);
-
 		for (; NOT_END(val); val++) {
-			if (IS_INTEGER(val) || IS_CHAR(val)) {
-				i = VAL_INT64(val);
-				if (bits > VTUI64) f = (REBDEC)(i);
-			}
-			else if (IS_DECIMAL(val)) {
-				f = VAL_DECIMAL(val);
-				if (bits <= VTUI64) i = (REBINT)(f);
-			}
-			else Trap_Arg(val);
-			//if (n >= ser->tail) Expand_Vector(ser);
-			set_vect(bits, ser->data, n++, i, f);
+			Set_Vector_Value(bits, ser->data, n++, val);
 		}
 	}
 	else {
@@ -271,12 +427,15 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 
 /***********************************************************************
 **
-*/	static REBOOL Query_Vector_Field(REBSER *vect, REBCNT field, REBVAL *ret)
+*/	static REBOOL Query_Vector_Field(REBSER *vect, REBCNT field, REBVAL *ret, REBVQV *vqv)
 /*
-**		Set a value with file data according specified mode
+**		Set a value with requested vector field result 
 **
 ***********************************************************************/
 {
+#define RETURN_DECIMAL(v) {SET_DECIMAL(ret, v); return TRUE;}
+#define RETURN_NUMBER(v)  {SET_DECIMAL(ret, v); goto return_number;}
+
 	switch (field) {
 	case SYM_TYPE:
 		Init_Word(ret, (VECT_TYPE(vect) >= VTSF08) ? SYM_DECIMAL_TYPE : SYM_INTEGER_TYPE);
@@ -292,16 +451,37 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 		break;
 	case SYM_MIN:
 	case SYM_MINIMUM:
+		if (vqv) RETURN_NUMBER(vqv->minimum);
 		Find_Minimum_Of_Vector(vect, ret);
 		break;
 	case SYM_MAX:
 	case SYM_MAXIMUM:
+		if (vqv) RETURN_NUMBER(vqv->maximum);
 		Find_Maximum_Of_Vector(vect, ret);
 		break;
 	default:
+		if (!vqv) {
+			REBVQV out;
+			Query_Vector_Statictics(vect, &out);
+			vqv = &out;
+		}
+		if (field == SYM_RANGE) RETURN_NUMBER((vqv->maximum - vqv->minimum));
+		if (field == SYM_SUM) RETURN_NUMBER(vqv->sum);
+		if (field == SYM_MEAN || field == SYM_AVERAGE) RETURN_DECIMAL(vqv->mean);
+		if (field == SYM_MEDIAN) RETURN_DECIMAL(Query_Vector_Median(vect));
+		if (field == SYM_VARIANCE) RETURN_DECIMAL(vqv->variance);
+		if (field == SYM_POPULATION_DEVIATION) RETURN_DECIMAL(sqrt(vqv->variance / SERIES_TAIL(vect)));
+		if (field == SYM_SAMPLE_DEVIATION) RETURN_DECIMAL(sqrt(vqv->variance / (SERIES_TAIL(vect) - 1)));
 		return FALSE;
 	}
 	return TRUE;
+return_number:
+	// Return integer if vector type is integer, else keep decimal
+	if (VECT_TYPE(vect) < VTSF08) SET_INTEGER(ret, (REBI64)VAL_DECIMAL(ret));
+	return TRUE;
+
+#undef RETURN_DECIMAL
+#undef RETURN_NUMBER
 }
 
 
@@ -317,20 +497,18 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 	REBYTE *data = VAL_SERIES(vect)->data;
 	REBCNT type = VECT_TYPE(VAL_SERIES(vect));
 	REBSER *ser = Make_Block(len);
-	REBCNT n;
 	REBVAL *val = NULL;
+	REBCNT reb_type = (type >= VTSF08) ? REB_DECIMAL : REB_INTEGER;
 
 	if (len > 0) {
 		val = BLK_HEAD(ser);
-		for (n = VAL_INDEX(vect); n < VAL_TAIL(vect); n++, val++) {
-			VAL_SET(val, (type >= VTSF08) ? REB_DECIMAL : REB_INTEGER);
-			VAL_INT64(val) = get_vect(type, data, n); // can be int or decimal
+		for (REBCNT n = VAL_INDEX(vect); n < VAL_TAIL(vect); n++, val++) {
+			VAL_SET(val, reb_type);
+			get_vect(type, data, n, val);
 		}
 		SET_END(val);
 	}
-
-	ser->tail = len;
-
+	SERIES_TAIL(ser) = len;
 	return ser;
 }
 
@@ -391,8 +569,8 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 			case VTUI16: for (; n<len; n++)	((u16*)data)[n] += (u16)i; break;
 			case VTUI32: for (; n<len; n++) ((u32*)data)[n] += (u32)i; break;
 			case VTUI64: for (; n<len; n++)	((i64*)data)[n] += (u64)i; break;
-			case VTSF08:
-			case VTSF16:
+//			case VTSF08:
+//			case VTSF16:
 			case VTSF32: for (; n<len; n++) (( float*)data)[n] += (float)f; break;
 			case VTSF64: for (; n<len; n++) ((double*)data)[n] += f; break;
 			}
@@ -407,8 +585,8 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 			case VTUI16: for (; n<len; n++)	((u16*)data)[n] -= (u16)i; break;
 			case VTUI32: for (; n<len; n++) ((u32*)data)[n] -= (u32)i; break;
 			case VTUI64: for (; n<len; n++)	((i64*)data)[n] -= (u64)i; break;
-			case VTSF08:
-			case VTSF16:
+//			case VTSF08:
+//			case VTSF16:
 			case VTSF32: for (; n<len; n++) (( float*)data)[n] -= (float)f; break;
 			case VTSF64: for (; n<len; n++) ((double*)data)[n] -= f; break;
 			}
@@ -423,8 +601,8 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 			case VTUI16: for (; n<len; n++)	((u16*)data)[n] *= (u16)i; break;
 			case VTUI32: for (; n<len; n++) ((u32*)data)[n] *= (u32)i; break;
 			case VTUI64: for (; n<len; n++)	((i64*)data)[n] *= (u64)i; break;
-			case VTSF08:
-			case VTSF16:
+//			case VTSF08:
+//			case VTSF16:
 			case VTSF32: for (; n<len; n++) (( float*)data)[n] *= (float)f; break;
 			case VTSF64: for (; n<len; n++) ((double*)data)[n] *= f; break;
 			}
@@ -440,8 +618,8 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 			case VTUI16: for (; n<len; n++)	((u16*)data)[n] /= (u16)i; break;
 			case VTUI32: for (; n<len; n++) ((u32*)data)[n] /= (u32)i; break;
 			case VTUI64: for (; n<len; n++)	((i64*)data)[n] /= (u64)i; break;
-			case VTSF08:
-			case VTSF16:
+//			case VTSF08:
+//			case VTSF16:
 			case VTSF32: for (; n<len; n++) (( float*)data)[n] /= (float)f; break;
 			case VTSF64: for (; n<len; n++) ((double*)data)[n] /= f; break;
 			}
@@ -453,20 +631,20 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 
 /***********************************************************************
 **
-*/	REBINT Compare_Vector(REBVAL *v1, REBVAL *v2)
+*/	REBINT Compare_Vector(REBVAL *a, REBVAL *b)
 /*
 ***********************************************************************/
 {
-	REBCNT l1 = VAL_LEN(v1);
-	REBCNT l2 = VAL_LEN(v2);
+	REBCNT l1 = VAL_LEN(a);
+	REBCNT l2 = VAL_LEN(b);
 	REBCNT len = MIN(l1, l2);
 	REBCNT n;
-	REBU64 i1 = 0;
-	REBU64 i2 = 0;
-	REBYTE *d1 = VAL_SERIES(v1)->data;
-	REBYTE *d2 = VAL_SERIES(v2)->data;
-	REBCNT b1 = VECT_TYPE(VAL_SERIES(v1));
-	REBCNT b2 = VECT_TYPE(VAL_SERIES(v2));
+	REBVAL v1;
+	REBVAL v2;
+	REBYTE *d1 = VAL_SERIES(a)->data;
+	REBYTE *d2 = VAL_SERIES(b)->data;
+	REBCNT b1 = VECT_TYPE(VAL_SERIES(a));
+	REBCNT b2 = VECT_TYPE(VAL_SERIES(b));
 
 	if (
 		(b1 >= VTSF08 && b2 < VTSF08)
@@ -474,13 +652,13 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 	) Trap0(RE_NOT_SAME_TYPE);
 
 	for (n = 0; n < len; n++) {
-		i1 = get_vect(b1, d1, n + VAL_INDEX(v1));
-		i2 = get_vect(b2, d2, n + VAL_INDEX(v2));
-		if (i1 != i2) break;
+		get_vect(b1, d1, n + VAL_INDEX(a), &v1);
+		get_vect(b2, d2, n + VAL_INDEX(b), &v2);
+		if (VAL_UNT64(&v1) != VAL_UNT64(&v2)) break;
 	}
 
 	if (n != len) {
-		if (i1 > i2) return 1;
+		if (VAL_UNT64(&v1) > VAL_UNT64(&v2)) return 1;
 		return -1;
 	}
 
@@ -496,37 +674,46 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 {
 	REBCNT n;
 	REBCNT k;
-	REBU64 swap;
+	REBVAL a, b;
 	REBYTE *data = VAL_SERIES(vect)->data;
 	REBCNT type = VECT_TYPE(VAL_SERIES(vect));
 	REBCNT idx = VAL_INDEX(vect);
 
-	// We can do it as INTS, because we just deal with the bits:
-	if (type == VTSF32) type = VTUI32;
-	else if (type == VTSF64) type = VTUI64;
-
 	for (n = VAL_LEN(vect); n > 1;) {
 		k = idx + (REBCNT)Random_Int(secure) % n;
 		n--;
-		swap = get_vect(type, data, k);
-		set_vect(type, data, k, get_vect(type, data, n + idx), 0);
-		set_vect(type, data, n + idx, swap, 0);
+		get_vect(type, data, k, &a);
+		get_vect(type, data, n + idx, &b);
+		set_vect(type, data, k, &b);
+		set_vect(type, data, n + idx, &a);
 	}
 }
 
+/***********************************************************************
+**
+*/	void Sort_Vector(REBVAL *vect, REBLEN len, REBFLG reversed)
+/*
+***********************************************************************/
+{
+	REBCNT type = VECT_TYPE(VAL_SERIES(vect));
+	REBCNT idx = VAL_INDEX(vect);
+	REBCNT skp = VECT_BYTE_SIZE(type);
+	REBYTE *data = VAL_SERIES(vect)->data + (idx * skp);
+
+	reb_qsort(data, len, skp, reversed ? compares_rev[type] : compares[type]);
+}
 
 /***********************************************************************
 **
-*/	void Set_Vector_Value(REBVAL *var, REBSER *series, REBCNT index)
+*/	void Get_Vector_Value(REBVAL *var, REBSER *series, REBCNT index)
 /*
 ***********************************************************************/
 {
 	REBYTE *data = series->data;
 	REBCNT bits = VECT_TYPE(series);
 
-	var->data.integer = get_vect(bits, data, index);
-	if (bits >= VTSF08) SET_TYPE(var, REB_DECIMAL);
-	else SET_TYPE(var, REB_INTEGER);
+	get_vect(bits, data, index, var);
+	SET_TYPE(var, (bits >= VTSF08) ? REB_DECIMAL : REB_INTEGER);
 }
 
 
@@ -560,6 +747,38 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 	return ser;
 }
 
+REBOOL Get_Vector_Spec_From_Symbol(REBCNT sym, REBINT *type, REBINT *sign, REBINT *bits) {
+	switch (Normalize_Vector_Type_Symbol(sym)) {
+	case SYM_INT8X:    *type = 0; *sign = 0; *bits =  8; break;
+	case SYM_UINT8X:   *type = 0; *sign = 1; *bits =  8; break;
+	case SYM_INT16X:   *type = 0; *sign = 0; *bits = 16; break;
+	case SYM_UINT16X:  *type = 0; *sign = 1; *bits = 16; break;
+	case SYM_INT32X:   *type = 0; *sign = 0; *bits = 32; break;
+	case SYM_UINT32X:  *type = 0; *sign = 1; *bits = 32; break;
+	case SYM_INT64X:   *type = 0; *sign = 0; *bits = 64; break;
+	case SYM_UINT64X:  *type = 0; *sign = 1; *bits = 64; break;
+	case SYM_FLOAT32X: *type = 1; *sign = 0; *bits = 32; break;
+	case SYM_FLOAT64X: *type = 1; *sign = 0; *bits = 64; break;
+	default: return FALSE;
+	}
+	return TRUE;
+}
+
+/***********************************************************************
+**
+*/	REBSER *Make_Vector_From_Word(REBCNT sym, REBINT size)
+/*
+**	Make a vector from a type name.
+**
+***********************************************************************/
+{
+	REBINT type, sign, bits;
+	if (Get_Vector_Spec_From_Symbol(sym, &type, &sign, &bits)) {
+		return Make_Vector(type, sign, 1, bits, size);
+	}
+	return NULL;	
+}
+
 /***********************************************************************
 **
 */	REBVAL *Make_Vector_Spec(REBVAL *bp, REBVAL *value)
@@ -589,29 +808,11 @@ void Find_Maximum_Of_Vector(REBSER *vect, REBVAL *ret) {
 
 	// SIGNED / UNSIGNED
 	if (IS_WORD(bp)) {
+		if (Get_Vector_Spec_From_Symbol(VAL_WORD_CANON(bp), &type, &sign, &bits)) {
+			bp++;
+			goto size_spec;
+		}
 		switch (VAL_WORD_CANON(bp)) {
-		case SYM_I8X:
-		case SYM_INT8X:   type = 0; sign = 0; bits =  8; bp++; goto size_spec;
-		case SYM_U8X:
-		case SYM_BYTEX:
-		case SYM_UINT8X:  type = 0; sign = 1; bits =  8; bp++; goto size_spec;
-		case SYM_I16X:
-		case SYM_INT16X:  type = 0; sign = 0; bits = 16; bp++; goto size_spec;
-		case SYM_U16X:
-		case SYM_UINT16X: type = 0; sign = 1; bits = 16; bp++; goto size_spec;
-		case SYM_I32X:
-		case SYM_INT32X:  type = 0; sign = 0; bits = 32; bp++; goto size_spec;
-		case SYM_U32X:
-		case SYM_UINT32X: type = 0; sign = 1; bits = 32; bp++; goto size_spec;
-		case SYM_I64X:
-		case SYM_INT64X:  type = 0; sign = 0; bits = 64; bp++; goto size_spec;
-		case SYM_U64X:
-		case SYM_UINT64X: type = 0; sign = 1; bits = 64; bp++; goto size_spec;
-		case SYM_F32X:
-		case SYM_FLOATX:  type = 1; sign = 0; bits = 32; bp++; goto size_spec;
-		case SYM_F64X:
-		case SYM_DOUBLEX: type = 1; sign = 0; bits = 64; bp++; goto size_spec;
-
 		case SYM_UNSIGNED: sign = 1; bp++; break;
 		case SYM_SIGNED:   sign = 0; bp++; break;
 		}
@@ -727,8 +928,6 @@ size_spec:
 	//REBINT dims;
 	
 	REBYTE *vp;
-	REBI64 i = 0;
-	REBDEC f = 0.0;
 
 	if (IS_INTEGER(sel) || IS_DECIMAL(sel)) {
 		n = Int32(sel);
@@ -737,7 +936,7 @@ size_spec:
 	} else if (IS_WORD(sel)) {
 		if (set == 0) {
 			val = pvs->value = pvs->store;
-			if(!Query_Vector_Field(vect, VAL_WORD_CANON(sel), val)) return PE_BAD_SELECT;
+			if(!Query_Vector_Field(vect, VAL_WORD_CANON(sel), val, NULL)) return PE_BAD_SELECT;
 			return PE_OK;
 		} else
 			return PE_BAD_SET;
@@ -755,13 +954,8 @@ size_spec:
 		if (n <= 0 || (REBCNT)n > vect->tail) return PE_NONE;
 
 		// Get element value:
-		pvs->store->data.integer = get_vect(bits, vp, n-1); // 64 bits
-		if (bits < VTSF08) {
-			SET_TYPE(pvs->store, REB_INTEGER);
-		} else {
-			SET_TYPE(pvs->store, REB_DECIMAL);
-		}
-
+		get_vect(bits, vp, n - 1, pvs->store);
+		SET_TYPE(pvs->store, (bits >= VTSF08) ? REB_DECIMAL : REB_INTEGER);
 		return PE_USE;
 	}
 
@@ -769,19 +963,7 @@ size_spec:
 	TRAP_PROTECT(vect);
 
 	if (n <= 0 || (REBCNT)n > vect->tail) return PE_BAD_RANGE;
-
-	if (IS_INTEGER(set)) {
-		i = VAL_INT64(set);
-		if (bits > VTUI64) f = (REBDEC)(i);
-	}
-	else if (IS_DECIMAL(set)) {
-		f = VAL_DECIMAL(set);
-		if (bits <= VTUI64) i = (REBINT)(f);
-	}
-	else return PE_BAD_SET;
-
-	set_vect(bits, vp, n-1, i, f);
-
+	Set_Vector_Value(bits, vp, n-1, set);
 	return PE_OK;
 }
 
@@ -915,6 +1097,17 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 		len = Partial(value, 0, D_ARG(3), 0);
 		if (len > 0) reverse_vector(value, len);
 		break;
+
+	case A_SORT:
+		len = Partial(value, 0, D_ARG(8), 0);
+		Sort_Vector(value, len, D_REF(10));
+		if (
+		//	D_REF(2) ||	// case sensitive
+			D_REF(3) ||	// skip
+			D_REF(5) 	// comparator
+		//	D_REF(9) 	// all fields
+			) Trap0(RE_FEATURE_NA);
+		break;
 			
 	case A_RANDOM:
 		if (D_REF(2) || D_REF(4)) Trap0(RE_BAD_REFINES); // /seed /only
@@ -926,12 +1119,12 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 		if (SYM_SPEC == VAL_WORD_SYM(D_ARG(2))) {
 			blk = Make_Block(4);
 			if (bits >= VTUI08 && bits <= VTUI64) Init_Word(Append_Value(blk), SYM_UNSIGNED);
-			Query_Vector_Field(vect, SYM_TYPE, Append_Value(blk));
-			Query_Vector_Field(vect, SYM_SIZE, Append_Value(blk));
-			Query_Vector_Field(vect, SYM_LENGTH, Append_Value(blk));
+			Query_Vector_Field(vect, SYM_TYPE, Append_Value(blk), NULL);
+			Query_Vector_Field(vect, SYM_SIZE, Append_Value(blk), NULL);
+			Query_Vector_Field(vect, SYM_LENGTH, Append_Value(blk), NULL);
 			Set_Series(REB_BLOCK, value, blk);
 		} else {
-			if(!Query_Vector_Field(vect, VAL_WORD_SYM(D_ARG(2)), value))
+			if(!Query_Vector_Field(vect, VAL_WORD_SYM(D_ARG(2)), value, NULL))
 				Trap_Reflect(VAL_TYPE(value), D_ARG(2));
 		}
 		break;
@@ -942,10 +1135,14 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 		if (!IS_OBJECT(spec)) Trap_Arg(spec);
 		REBVAL *field = D_ARG(ARG_QUERY_FIELD);
 		if(IS_WORD(field)) {
-			if (!Query_Vector_Field(vect, VAL_WORD_SYM(field), value))
+			if (!Query_Vector_Field(vect, VAL_WORD_SYM(field), value, NULL))
 				Trap_Reflect(VAL_TYPE(value), field); // better error?
+			break;
 		}
-		else if (IS_BLOCK(field)) {
+		REBVQV results = { 0 };
+		Query_Vector_Statictics(vect, &results);
+
+		if (IS_BLOCK(field)) {
 			REBSER *values = Make_Block(2 * BLK_LEN(VAL_SERIES(field)));
 			REBVAL *word = VAL_BLK_DATA(field);
 			for (; NOT_END(word); word++) {
@@ -958,7 +1155,7 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 						VAL_SET_LINE(val);
 					}
 					val = Append_Value(values);
-					if (!Query_Vector_Field(vect, VAL_WORD_SYM(word), val))
+					if (!Query_Vector_Field(vect, VAL_WORD_SYM(word), val, &results))
 						Trap1(RE_INVALID_ARG, word);
 				}
 				else  Trap1(RE_INVALID_ARG, word);
@@ -971,12 +1168,19 @@ static void reverse_vector(REBVAL *value, REBCNT len)
 		}
 		else {
 			REBSER *obj = CLONE_OBJECT(VAL_OBJ_FRAME(spec));
-			Query_Vector_Field(vect, SYM_SIGNED, OFV(obj, STD_VECTOR_INFO_SIGNED));
-			Query_Vector_Field(vect, SYM_TYPE,   OFV(obj, STD_VECTOR_INFO_TYPE));
-			Query_Vector_Field(vect, SYM_SIZE,   OFV(obj, STD_VECTOR_INFO_SIZE));
-			Query_Vector_Field(vect, SYM_LENGTH, OFV(obj, STD_VECTOR_INFO_LENGTH));
-			Query_Vector_Field(vect, SYM_MINIMUM, OFV(obj, STD_VECTOR_INFO_MINIMUM));
-			Query_Vector_Field(vect, SYM_MAXIMUM, OFV(obj, STD_VECTOR_INFO_MAXIMUM));
+			Query_Vector_Field(vect, SYM_SIGNED, OFV(obj, STD_VECTOR_INFO_SIGNED), &results);
+			Query_Vector_Field(vect, SYM_TYPE,   OFV(obj, STD_VECTOR_INFO_TYPE), &results);
+			Query_Vector_Field(vect, SYM_SIZE,   OFV(obj, STD_VECTOR_INFO_SIZE), &results);
+			Query_Vector_Field(vect, SYM_LENGTH, OFV(obj, STD_VECTOR_INFO_LENGTH), &results);
+			Query_Vector_Field(vect, SYM_MINIMUM, OFV(obj, STD_VECTOR_INFO_MINIMUM), &results);
+			Query_Vector_Field(vect, SYM_MAXIMUM, OFV(obj, STD_VECTOR_INFO_MAXIMUM), &results);
+			Query_Vector_Field(vect, SYM_RANGE, OFV(obj, STD_VECTOR_INFO_RANGE), &results);
+			Query_Vector_Field(vect, SYM_SUM, OFV(obj, STD_VECTOR_INFO_SUM), &results);
+			Query_Vector_Field(vect, SYM_MEAN, OFV(obj, STD_VECTOR_INFO_MEAN), &results);
+			Query_Vector_Field(vect, SYM_MEDIAN, OFV(obj, STD_VECTOR_INFO_MEDIAN), &results);
+			Query_Vector_Field(vect, SYM_VARIANCE, OFV(obj, STD_VECTOR_INFO_VARIANCE), &results);
+			Query_Vector_Field(vect, SYM_POPULATION_DEVIATION, OFV(obj, STD_VECTOR_INFO_POPULATION_DEVIATION), &results);
+			Query_Vector_Field(vect, SYM_SAMPLE_DEVIATION, OFV(obj, STD_VECTOR_INFO_SAMPLE_DEVIATION), &results);
 			SET_OBJECT(value, obj);
 		}
 		break;
@@ -1006,7 +1210,7 @@ bad_make:
 	REBCNT len;
 	REBCNT n;
 	REBCNT c;
-	union {REBU64 i; REBDEC d;} v;
+	REBVAL v;
 	REBYTE buf[32];
 	REBYTE l;
 	REBOOL indented = !GET_MOPT(mold, MOPT_INDENT);
@@ -1020,11 +1224,15 @@ bad_make:
 	}
 
 	if (molded) {
-		REBCNT type = (bits >= VTSF08) ? REB_DECIMAL : REB_INTEGER;
-		Pre_Mold(value, mold);
-		if (!GET_MOPT(mold, MOPT_MOLD_ALL)) Append_Byte(mold->series, '[');
-		if (bits >= VTUI08 && bits <= VTUI64) Append_Bytes(mold->series, "unsigned ");
-		Emit(mold, "N I I [", type+1, VECT_BIT_SIZE(bits), len);
+		REBCNT type = (bits >= VTSF32) ? REB_DECIMAL : REB_INTEGER;
+		if (GET_MOPT(mold, MOPT_MOLD_ALL)) {
+			Emit(mold, "#(T ", value);
+			if (bits >= VTUI08 && bits <= VTUI64) Append_Bytes(mold->series, "unsigned ");
+			Emit(mold, "N I I [", type + 1, VECT_BIT_SIZE(bits), len);
+		}
+		else {
+			Emit(mold, "#(S [", Get_Sym_Name(SYM_INT8X + bits));
+		}
 		if (indented && len > 10) {
 			mold->indent++;
 			New_Indented_Line(mold);
@@ -1035,11 +1243,11 @@ bad_make:
 	c = 0;
 	for (; n < vect->tail; n++) {
 		if (MOLD_HAS_LIMIT(mold) && MOLD_OVER_LIMIT(mold)) return;
-		v.i = get_vect(bits, data, n);
+		get_vect(bits, data, n, &v);
 		if (bits < VTSF08) {
-			l = Emit_Integer(buf, v.i);
+			l = Emit_Integer(buf, VAL_INT64(&v));
 		} else {
-			l = Emit_Decimal(buf, v.d, 0, '.', mold->digits);
+			l = Emit_Decimal(buf, VAL_DECIMAL(&v), 0, '.', mold->digits);
 		}
 		Append_Bytes_Len(mold->series, buf, l);
 		if (indented && (++c > 9) && (n+1 < vect->tail)) {
@@ -1058,11 +1266,10 @@ bad_make:
 			New_Indented_Line(mold);
 		}
 		Append_Byte(mold->series, ']');
-		if (!GET_MOPT(mold, MOPT_MOLD_ALL)) {
-			Append_Byte(mold->series, ']');
+		if (GET_MOPT(mold, MOPT_MOLD_ALL) && VAL_INDEX(value)) {
+			Append_Byte(mold->series, ' ');
+			Append_Int(mold->series, VAL_INDEX(value) + 1);
 		}
-		else {
-			Post_Mold(value, mold);
-		}
+		Append_Byte(mold->series, ')');
 	}
 }
