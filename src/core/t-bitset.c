@@ -141,21 +141,19 @@
 	case REB_URL:
 	case REB_TAG:
 //	case REB_ISSUE:
-		n = VAL_INDEX(val);
-		if (IS_UTF8_SERIES(VAL_SERIES(val))) {
+		if (IS_UTF8_STRING(val)) {
 			REBU32 chr;
-			REBCNT sz;
+			REBCNT sz = VAL_LEN(val);
 			const REBYTE *bp = VAL_BIN_DATA(val);
-			while (n < VAL_TAIL(val)) {
+			while (sz > 0) {
 				chr = UTF8_Decode_Codepoint(&bp, &sz);
 				if (chr > maxi) maxi = chr;
-				n += sz;
 			}
 		}
 		else {
 			//ASCII...
 			REBYTE *bp = VAL_BIN(val);
-			for (; n < VAL_TAIL(val); n++)
+			for (n = VAL_INDEX(val); n < VAL_TAIL(val); n++)
 				if (bp[n] > maxi) maxi = bp[n];
 		}
 		//maxi++; //@@ https://github.com/Oldes/Rebol-issues/issues/2415
@@ -330,7 +328,7 @@ retry:
 
 	if(IS_PROTECT_SERIES(bset)) Trap0(RE_PROTECTED);
 
-	if (IS_UTF8_SERIES(VAL_SERIES(val))) {
+	if (IS_UTF8_STRING(val)) {
 		const REBYTE *bp = VAL_BIN_DATA(val);
 		while (sz > 0) {
 			chr = UTF8_Decode_Codepoint(&bp, &sz);

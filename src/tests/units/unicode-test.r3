@@ -147,7 +147,134 @@ Rebol [
 	--test-- "first"
 		--assert #"🙂" == first "🙂ab"
 		--assert #"🙂" == first next "a🙂b"
-		
+	
+	--test-- "foreach"
+		--assert all [
+			str: "áb🙂"
+			out: copy ""
+			foreach c str [append out c]
+			str == out
+		]
+		--assert all [
+			str: "a🙂čb"
+			out: copy ""
+			foreach [a b] str [append append out b a]
+			out == "🙂abč"
+		]
+
+	--test-- "remove-each"
+		--assert all [
+			str: "a🙂čb"
+			out: copy ""
+			"ab" == remove-each c str [append out c  c > 0#7f]
+			"ab" == str
+			out  == "a🙂čb"
+		]
+
+	--test-- "remove-each/count"
+		--assert all [
+			str: "a🙂čb"
+			2 == remove-each/count c str [c > 0#7f]
+			"ab" == str
+		]
+
+	--test-- "forall"
+		--assert all [
+			str: next "xáb🙂"
+			out: copy ""
+			n: 0
+			3 == forall str [append out str/1 n: n + 1]
+			out == str
+		]
+		--assert all [
+			str: tail "xáb🙂"
+			out: copy ""
+			n: 0
+			none? forall str [append out str/1 n: n + 1]
+			empty? out
+		]
+
+	--test-- "forall + take"
+		--assert all [
+			str: "ááb"
+			out: copy ""
+			n: 0
+			2 == forall str [if str/1 >= 127 [append out take str] n: n + 1]
+			str == "áb" ;; by design that only one "á" was removed
+			out == "á"  ;; because `take` modifies the index!
+		]
+
+
+	--test-- "forskip"
+		--assert all [
+			str: next "xáb🙂d"
+			out: copy ""
+			n: 0
+			2 == forskip str 2 [append out str/1 n: n + 1]
+			out == "á🙂"
+		]
+
+		--assert all [
+			str: back tail "xáb🙂d"
+			out: copy ""
+			n: 0
+			1 == forskip str 2 [str append out str/1 n: n + 1]
+			out == "d"
+		]
+
+		--assert all [
+			s1: "abcd"
+			s2: "ABCDEF"
+			out: copy ""
+			n: 0
+			3 == forskip s1 2 [append out s1/1 s1: at s2 index? s1 n: n + 1]
+			out == "aCE"
+		]
+		--assert all [
+			s1: "abcd"
+			s2: "ABČDEF"
+			out: copy ""
+			n: 0
+			3 == forskip s1 2 [probe s1 append out s1/1 s1: at s2 index? s1 n: n + 1]
+			out == "aČE"
+		]
+
+	--test-- "repeat"
+		--assert all [
+			str: next "xáb🙂d"
+			out: copy ""
+			repeat x str [append out x/1]
+			out == "áb🙂d"
+		]
+
+	--test-- "for"
+		--assert all [
+			str: next "xáb🙂d"
+			out: copy ""
+			none? for x str 1 1 [append out x/1]
+		]
+		--assert all [
+			str: next "xáb🙂d"
+			out: copy ""
+			for x str 2 1 [append out x/1]
+			out == "á"
+		]
+		--assert all [
+			str: next "xáb🙂d"
+			out: copy ""
+			for x str 100 1 [append out x/1]
+			out == "áb🙂dnone" ;; none, because the last value is empty
+		]
+		--assert all [
+			str: back tail "xáb🙂d"
+			out: copy ""
+			for x str 1 -1 [append out x/1]
+			out == "d🙂báx"
+		]
+
+	--test-- "to-hex"
+		--assert #01F642 = to-hex #"🙂"
+		--assert #01F642 = to-hex #"^(01F642)"
 		
 ===end-group===
 
@@ -232,7 +359,7 @@ Rebol [
 		bits: charset #"č"
 		--assert "čxčá" == find "🙂čxčá" bits
 		--assert "xčá" == find/tail "🙂čxčá" bits
-		bits: charset "🙂č"
+		;bits: charset "🙂č"
 		;--assert "🙂čxčá" == find "x🙂čxčá" bits
 		;--assert "čxčá" == find/tail "x🙂čxčá" bits
 
@@ -336,13 +463,37 @@ Rebol [
 		--assert all [(change o: "---" #"🙂") == "--"  o == "🙂--"]
 
 	--test-- "take"
-		--assert #"á" == take "áb"
-		--assert #"🙂" == take "🙂b"
-		--assert #"🙂" == take next "á🙂b"
+		--assert all [
+			#"á" == take s: "áb"
+			s == "b"
+		]
+		--assert all [
+			#"🙂" == take s: "🙂b"
+			s == "b"
+		]
+		--assert all [
+			#"🙂" == take next s: "á🙂b"
+			s == "áb"
+		]
 
+	--test-- "take/all"
 		--assert "áb" == take/all "áb"
 		--assert "🙂b" == take/all "🙂b"
 		--assert "🙂b" == take/all next "á🙂b"
+
+	--test-- "take/part"
+		--assert all [
+			"áb" == take/part s: "ábx" 2
+			s == "x"
+		]
+		--assert all [
+			"🙂b" == take/part s: "🙂bx" 2
+			s == "x"
+		]
+		--assert all [
+			"🙂b" == take/part next s: "á🙂bx" 2
+			s == "áx"
+		]
 
 	--test-- "remove"
 		--assert "b" == remove "áb"
