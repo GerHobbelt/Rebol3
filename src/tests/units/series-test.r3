@@ -649,6 +649,10 @@ Rebol [
 		;@@ https://github.com/Oldes/Rebol-issues/issues/1162
 		s: copy "abcde"
 		--assert "bcdee" = replace/all s copy/part s 4 skip s 1
+
+	--test-- "unicode string"
+		;@@ https://github.com/Oldes/Rebol-issues/issues/2665
+		--assert (replace/all "<á]] <é]]" "]]" #">") == "<á> <é>"
 		
 ===end-group===
 
@@ -2054,8 +2058,38 @@ try/with [
 	--assert s = [2 3 4]
 	--assert 'x = remove-each/count n s: [1 2 3 4] [if n = 2 [break/return 'x] true]
 	--assert s = [2 3 4]
+===end-group===
+
+
+===start-group=== "CONTINUE in loops"
+;@@ https://github.com/Oldes/Rebol-issues/issues/2663
+	o: clear ""
+	--test-- "foreach"
+		foreach n [1 2 3] [if n == 2 [continue] append o n]
+		--assert o == "13"
+		clear o
+		foreach n "123" [if n == #"2" [continue] append o n]
+		--assert o == "13"
+	--test-- "repeat"
+		clear o
+		repeat n 3 [if n == 2 [continue] append o n]
+		--assert o == "13"
+	--test-- "forall"
+		b: [1 2 3]
+		clear o
+		forall b [if b/1 == 2 [continue] append o b/1]
+		--assert o == "13"
+	--test-- "forskip"
+		clear o
+		forskip b 1 [if b/1 == 2 [continue] append o b/1]
+		--assert o == "13"
+		s: "á23"
+		clear o
+		forskip s 1 [if s/1 == #"2" [continue] append o s/1]
+		--assert o == "á3"
 
 ===end-group===
+
 
 ===start-group=== "STRING conversion"
 
