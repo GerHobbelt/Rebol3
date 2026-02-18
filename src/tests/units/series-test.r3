@@ -678,6 +678,10 @@ Rebol [
 	--test-- "unicode string"
 		;@@ https://github.com/Oldes/Rebol-issues/issues/2665
 		--assert (replace/all "<á]] <é]]" "]]" #">") == "<á> <é>"
+
+	--test-- "issue-2683"
+		;@@ https://github.com/Oldes/Rebol-issues/issues/2683
+		--assert "YaYb" = replace/all "XXXaXXXb" "XXX" #"Y"
 		
 ===end-group===
 
@@ -751,6 +755,11 @@ Rebol [
 	--test-- "APPEND string! char!"
 		--assert "a" = append "" #"a"
 		--assert "←" = append "" #"^(2190)" ; wide char
+		;@@ https://github.com/Oldes/Rebol-issues/issues/2683
+		--assert "a" = append/part "" #"a" 10
+		--assert "←" = append/part "" #"^(2190)" 10
+		--assert "1" = append/part "" 1 10
+		--assert "1.1.1" = append/part "" 1.1.1 10
 ===end-group===
 
 ===start-group=== "APPEND ref!"
@@ -787,6 +796,9 @@ Rebol [
 	--test-- "APPEND binary! char!"
 		--assert #{0001}     = append #{00} #"^(01)"
 		--assert #{00E28690} = append #{00} #"^(2190)"
+		;@@ https://github.com/Oldes/Rebol-issues/issues/2683
+		--assert #{0001}     = append/part #{00} #"^(01)" 10
+		--assert #{00E28690} = append/part #{00} #"^(2190)" 10
 	--test-- "APPEND/part binary!"
 		--assert #{01} = append/part #{} #{0102} 1
 		--assert #{01} = append/part #{} "^(01)^(02)" 1
@@ -1736,6 +1748,21 @@ Rebol [
 	;@@ https://github.com/Oldes/Rebol-issues/issues/721
 	--assert [4 3 2 1] = sort/compare [1 2 3 4] :greater?
 
+	;@@ https://github.com/Oldes/Rebol-issues/issues/2684
+	--assert (sort/skip ["A2" "B3" "C1" "A1" "B2" "C3" "A3" "B1" "C2"] 3)
+			== ["A1" "B2" "C3" "A2" "B3" "C1" "A3" "B1" "C2"]
+	--assert (sort/skip/compare ["A2" "B3" "C1" "A1" "B2" "C3" "A3" "B1" "C2" ] 3 [ 3 2 1 ])
+			== ["A2" "B3" "C1" "A3" "B1" "C2" "A1" "B2" "C3"]
+	--assert (sort/skip/compare [ "A2" "B3" "C1" "A1" "B2" "C3" "A3" "B1" "C2" ] 3 [ 2 3 1 ])
+			== ["A3" "B1" "C2" "A1" "B2" "C3" "A2" "B3" "C1"]
+	--assert (sort/skip/compare [ "A2" "B3" "C1" "A1" "B2" "C3" "A3" "B1" "C2" ] 3 [ 2 1 3 ])
+			== ["A3" "B1" "C2" "A1" "B2" "C3" "A2" "B3" "C1"]
+	--assert (sort/skip/compare [ "A2" "B3" "C1" "A1" "B2" "C3" "A3" "B1" "C2" ] 3 [ 1 2 3 ])
+			== ["A1" "B2" "C3" "A2" "B3" "C1" "A3" "B1" "C2"]
+	--assert all [error? e: try [sort/skip/compare [3 B 1 B] 2 [2 -1]] e/id = 'invalid-arg]
+	--assert all [error? e: try [sort/skip/compare [3 B 1 B] 2 [2 0]] e/id = 'invalid-arg]
+	--assert all [error? e: try [sort/skip/compare [3 B 1 B] 2 [2 x]] e/id = 'invalid-arg]
+
 --test-- "SORT/compare string!"
 	;@@ https://github.com/Oldes/Rebol-issues/issues/1100
 	comp: func [a b] [a > b]
@@ -1874,6 +1901,11 @@ try/with [
 	--assert [1.#NaN 1.#NaN 1.#INF 1.0 0 -1.0 -1.#INF] = sort/reverse [1.#inf -1.0 1.#nan 1.#NAN 1.0 -1.#inf 0]
 	--assert [1.#NaN 1.#NaN 1.#INF 1.0 0 -1.0 -1.#INF] = sort/reverse [1.#inf 1.#NAN -1.0 1.#nan 1.0 -1.#inf 0]
 	--assert [1.#NaN 1.#NaN 1.#INF 1.0 0 -1.0 -1.#INF] = sort/reverse [1.#NAN 1.#inf -1.0 1.#nan 1.0 -1.#inf 0]
+
+--test-- "SORT inifinite loop case"
+	;@@ https://github.com/jingchaochen/Symmetry-Partition-Sort/issues/1
+	words: ["type" "offset" "size" "text" "image" "color" "menu" "data" "enabled?" "visible?" "selected" "flags" "options" "parent" "pane" "state" "rate" "edge" "para" "font" "actors" "extra" "draw" "on-change*" "on-deep-change*"]
+	--assert ["type" "menu" "size" "text" "draw" "pane" "edge" "data" "rate" "font" "para" "flags" "color" "image" "state" "extra" "offset" "actors" "parent" "options" "selected" "visible?" "enabled?" "on-change*" "on-deep-change*"] == sort/compare words func [a b][(length? a) < (length? b)]
 
 ===end-group===
 

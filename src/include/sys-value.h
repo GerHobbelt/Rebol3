@@ -3,7 +3,7 @@
 **  REBOL [R3] Language Interpreter and Run-time Environment
 **
 **  Copyright 2012 REBOL Technologies
-**  Copyright 2012-2025 Rebol Open Source Contributors
+**  Copyright 2012-2026 Rebol Open Source Contributors
 **  REBOL is a trademark of REBOL Technologies
 **
 **  Licensed under the Apache License, Version 2.0 (the "License");
@@ -449,8 +449,8 @@ static REBCNT byte_sizes[4] = { 1, 2, 4, 8 };
 // Optimized expand when at tail (but, does not reterminate)
 #define EXPAND_SERIES_TAIL(s,l) if (SERIES_FITS(s, l)) s->tail += l; else Expand_Series(s, AT_TAIL, l)
 #define RESIZE_SERIES(s,l) s->tail = 0; if (!SERIES_FITS(s, l)) Expand_Series(s, AT_TAIL, l); s->tail = 0
-#define RESET_SERIES(s) s->tail = 0; TERM_SERIES(s)
-#define RESET_TAIL(s) s->tail = 0
+#define RESET_TAIL(s) s->tail = 0; SERIES_CLR_FLAG(s, SER_UTF8);
+#define RESET_SERIES(s) RESET_TAIL(s); TERM_SERIES(s);
 
 // Clear all and clear to tail:
 #define CLEAR_SERIES(s) CLEAR(SERIES_DATA(s), SERIES_SPACE(s))
@@ -1383,6 +1383,7 @@ typedef struct Reb_All {
 #define ANY_STR(v)			(VAL_TYPE(v) >= REB_STRING && VAL_TYPE(v) <= REB_TAG)
 #define ANY_BINSTR(v)		(VAL_TYPE(v) >= REB_BINARY && VAL_TYPE(v) <= REB_TAG)
 #define ANY_BLOCK(v)		(VAL_TYPE(v) >= REB_BLOCK  && VAL_TYPE(v) <= REB_HASH)
+#define ANY_BLOCK_OR_MAP(v) (VAL_TYPE(v) >= REB_BLOCK  && VAL_TYPE(v) <= REB_MAP)
 #define	ANY_WORD(v)			(VAL_TYPE(v) >= REB_WORD   && VAL_TYPE(v) <= REB_ISSUE)
 #define	ANY_PATH(v)			(VAL_TYPE(v) >= REB_PATH   && VAL_TYPE(v) <= REB_LIT_PATH)
 #define ANY_FUNC(v)			(VAL_TYPE(v) >= REB_NATIVE && VAL_TYPE(v) <= REB_FUNCTION)
