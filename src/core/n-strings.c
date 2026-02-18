@@ -33,7 +33,13 @@
 #include "sys-deci-funcs.h"
 #include "sys-checksum.h"
 
-REBCNT z_adler32_z(REBCNT adler, REBYTE *buf, REBCNT len);
+#ifdef INCLUDE_DEFLATE
+#define ADLER32_FUNC libdeflate_adler32
+#else
+#define ADLER32_FUNC z_adler32_z
+#endif
+
+REBCNT ADLER32_FUNC(REBCNT adler, REBYTE *buf, REBCNT len);
 REBSER *Make_Binary_BE64(REBVAL *arg);
 
 // Table of hash functions and parameters:
@@ -348,7 +354,7 @@ static struct digest {
 		Trap0(RE_BAD_REFINES);
 
 	if (sym == SYM_CRC32 || sym == SYM_ADLER32) {
-		i = (sym == SYM_CRC32) ? CRC32(bin, len) : z_adler32_z(0x00000001L, bin, len);
+		i = (sym == SYM_CRC32) ? CRC32(bin, len) : ADLER32_FUNC(0x00000001L, bin, len);
 	}
 	else if (sym == SYM_HASH) {  // /hash
 		if(!D_REF(ARG_CHECKSUM_WITH)) Trap0(RE_MISSING_ARG);
@@ -368,163 +374,6 @@ static struct digest {
 	}
 
 	DS_RET_INT(i);
-	return R_RET;
-}
-
-
-/***********************************************************************
-**
-*/	REBNATIVE(compress)
-/*
-//	compress: native [
-//		{Compresses data.}
-//		data [binary! string!] {If string, it will be UTF8 encoded}
-//		method [word!] {One of `system/catalog/compressions`}
-//		/part length {Length of source data}
-//		/level lvl [integer!] {Compression level 0-9}
-//	]
-***********************************************************************/
-{
-	REBVAL *data     = D_ARG(1);
-	REBINT  method   = VAL_WORD_CANON(D_ARG(2));
-//	REBOOL ref_part  = D_REF(3);
-	REBVAL *length   = D_ARG(4);
-	REBOOL ref_level = D_REF(5);
-	REBVAL *level    = D_ARG(6);
-
-	REBSER *ser = VAL_SERIES(data);
-	REBCNT len = Partial1(data, length); // May modify the index!
-	REBCNT index = VAL_INDEX(data);
-	REBINT windowBits = MAX_WBITS;
-
-	switch (method) {
-	case SYM_ZLIB:
-	zlib_compress:
-		Set_Binary(D_RET, CompressZlib(ser, index, (REBINT)len, ref_level ? VAL_INT32(level) : -1, windowBits));
-		break;
-	
-	case SYM_DEFLATE:
-		windowBits = -windowBits;
-		goto zlib_compress;
-	
-	case SYM_GZIP:
-		windowBits |= 16;
-		goto zlib_compress;
-	
-	case SYM_BR:
-#ifdef INCLUDE_BROTLI
-		Set_Binary(D_RET, CompressBrotli(ser, index, (REBINT)len, ref_level ? VAL_INT32(level) : -1));
-#else
-		Trap0(RE_FEATURE_NA);
-#endif
-		break;
-
-	case SYM_LZMA:
-#ifdef INCLUDE_LZMA
-		Set_Binary(D_RET, CompressLzma(ser, index, (REBINT)len, ref_level ? VAL_INT32(level) : -1));
-#else
-		Trap0(RE_FEATURE_NA);
-#endif
-		break;
-	case SYM_LZW:
-#ifdef INCLUDE_LZW
-		Set_Binary(D_RET, CompressLzw(ser, index, (REBINT)len, ref_level ? VAL_INT32(level) : -1));
-#else
-		Trap0(RE_FEATURE_NA);
-#endif
-		break;
-	case SYM_CRUSH:
-#ifdef INCLUDE_CRUSH
-		Set_Binary(D_RET, CompressCrush(ser, index, (REBINT)len, ref_level ? VAL_INT32(level) : 2));
-#else
-		Trap0(RE_FEATURE_NA);
-#endif
-		break;
-	default:
-		Trap1(RE_INVALID_ARG, D_ARG(2));
-	}
-
-	return R_RET;
-}
-
-
-/***********************************************************************
-**
-*/	REBNATIVE(decompress)
-/*
-//	decompress: native [
-//		{Decompresses data.}
-//		data [binary!] {Source data to decompress}
-//		method [word!] {One of `system/catalog/compressions`}
-//		/part "Limits source data to a given length or position"
-//			length [number! series!] {Length of compressed data (must match end marker)}
-//		/size
-//			bytes [integer!] {Number of uncompressed bytes.}
-]
-***********************************************************************/
-{
-	REBVAL *data    = D_ARG(1);
-	REBINT  method  = VAL_WORD_CANON(D_ARG(2));
-//	REBOOL ref_part = D_REF(3);
-	REBVAL *length  = D_ARG(4);
-	REBOOL ref_size = D_REF(5);
-	REBVAL *size    = D_ARG(6);
-
-	REBCNT limit = 0;
-	REBCNT len;
-	REBINT windowBits = MAX_WBITS;
-
-	len = Partial1(data, length);
-
-	if (ref_size) limit = (REBCNT)Int32s(size, 1); // /limit size
-
-	switch (method) {
-	case SYM_ZLIB:
-	zlib_decompress:
-		Set_Binary(D_RET, DecompressZlib(VAL_SERIES(data), VAL_INDEX(data), (REBINT)len, limit, windowBits));
-		break;
-
-	case SYM_DEFLATE:
-		windowBits = -windowBits;
-		goto zlib_decompress;
-
-	case SYM_GZIP:
-		windowBits |= 16;
-		goto zlib_decompress;
-
-	case SYM_BR:
-#ifdef INCLUDE_BROTLI
-		Set_Binary(D_RET, DecompressBrotli(VAL_SERIES(data), VAL_INDEX(data), (REBINT)len, limit));
-#else
-		Trap0(RE_FEATURE_NA);
-#endif
-		break;
-
-	case SYM_LZMA:
-#ifdef INCLUDE_LZMA
-		Set_Binary(D_RET, DecompressLzma(VAL_SERIES(data), VAL_INDEX(data), (REBINT)len, limit));
-#else
-		Trap0(RE_FEATURE_NA);
-#endif
-		break;
-	case SYM_LZW:
-#ifdef INCLUDE_LZW
-		Set_Binary(D_RET, DecompressLzw(VAL_SERIES(data), VAL_INDEX(data), (REBINT)len, limit));
-#else
-		Trap0(RE_FEATURE_NA);
-#endif
-		break;
-	case SYM_CRUSH:
-#ifdef INCLUDE_CRUSH
-		Set_Binary(D_RET, DecompressCrush(VAL_SERIES(data), VAL_INDEX(data), (REBINT)len, limit));
-#else
-		Trap0(RE_FEATURE_NA);
-#endif
-		break;
-	default:
-		Trap1(RE_INVALID_ARG, D_ARG(2));
-	}
-
 	return R_RET;
 }
 

@@ -3,19 +3,116 @@
 This is just generated output from commits in [this repository](https://github.com/Oldes/Rebol3). For full log use [GitHub commits](https://github.com/Oldes/Rebol3/commits/master).
 
 
+## 2025 December
+
+### Features:
+
+* [`6492ec`](https://github.com/Oldes/Rebol3/commit/6492ec92649dc9e42afaaa5230c53a2b46f1c679) Add link to latest Rebol/Zlib-ng extension
+* [`aa784b`](https://github.com/Oldes/Rebol3/commit/aa784ba59280d6e2e79b4f81bd8f1e3515ea32bf) Add link to latest Rebol/Brotli extension
+* [`8d8987`](https://github.com/Oldes/Rebol3/commit/8d89872f68bf1bf02d3b999ae904cd017f45284c) Add link to latest Rebol/Zstd extension
+* [`a1db7a`](https://github.com/Oldes/Rebol3/commit/a1db7a5d824f2316e7438a705f343127cfa788fa) Add link to latest Rebol/Deflate extension
+* [`7df1d4`](https://github.com/Oldes/Rebol3/commit/7df1d445e4e73591f16b4f1720d6a38649f97c24) Add `recycle/pool` to free empty memory pool segments
+* [`80a468`](https://github.com/Oldes/Rebol3/commit/80a4683c10306245314d1c0cf961ea5b8d95d508) Add optional LZ4 de/compression
+
+### Changes:
+
+* [`dc0422`](https://github.com/Oldes/Rebol3/commit/dc0422273db6808d843ab24f7bfe3be2fb4879a6) Extend compression method registry when needed
+* [`bc42bf`](https://github.com/Oldes/Rebol3/commit/bc42bfc0f35f56209ade1a77d8b4fb10eb1132ad) Refactoring of SYS-LOAD and SYS-BASE (#153)
+
+  No substantive changes—intent is to better elucidate the LOAD and DO processes with an eye to review and modification. Where possible, word names are expanded and reflect what each value represents, not what they are.
+* [`ce497a`](https://github.com/Oldes/Rebol3/commit/ce497af725f018b6ea5e2ca439d9def16b69218d) Update link to the latest MiniAudio extension (version 0.11.23)
+* [`bf8dbc`](https://github.com/Oldes/Rebol3/commit/bf8dbcbdf685d3cd0654d868fe9d269f5812f314) Using `libdeflate` sources for `deflate`, `zlib` and `gzip` compressions
+
+  Here are test results from my notebook:
+  ```
+  c:\Dev\Builder\tree\rebol\Rebol\src\tests>rebol_3.20.7 -s test-deflate.r3
+  Rebol/version: 3.20.7
+  Data length: 1039872
+  Test: [checksum data 'crc32]
+  Time: 0.000112
+  Test: [checksum data 'adler32]
+  Time: 0.000077
+  Test: [compress/level data 'deflate 9]
+  Time: 0.028716
+  
+  c:\Dev\Builder\tree\rebol\Rebol\src\tests>rebol_3.20.0 -s test-deflate.r3
+  Rebol/version: 3.20.0
+  Data length: 1039872
+  Test: [checksum data 'crc32]
+  Time: 0.003945
+  Test: [checksum data 'adler32]
+  Time: 0.000667
+  Test: [compress/level data 'deflate 9]
+  Time: 0.076221
+  ```
+* [`f14224`](https://github.com/Oldes/Rebol3/commit/f14224009b0cc7313f2f99444a4e9aabc525b34f) Gracefully release memory in debug builds to help detect leaks
+
+  - Gracefully disposes all memory only when `quit` is used, and only in builds compiled with the `DEBUG` define.
+  - Some guru meditation `evoke` chants are available only in `DEBUG` builds.
+  - `recycle` now returns the number of bytes released from the heap (memory released to pools is not reported).
+  - `stats` returns the total number of bytes currently allocated from the heap.
+  - In debug builds, it is possible to monitor memory allocations using  `evoke 'watch-alloc`
+
+### Fixes:
+
+* [`2c484f`](https://github.com/Oldes/Rebol3/commit/2c484f67e78d48482aaa902a51f4fee8afc3ea0a) Regression related to #153 and #155
+* [`07bfe8`](https://github.com/Oldes/Rebol3/commit/07bfe85740b43f44e55fc2715a7d73f2e43bd79b) Properly parse double quotes in Unicode escape sequences (#154)
+* [`25ba57`](https://github.com/Oldes/Rebol3/commit/25ba5731cef1bb8b96c8f073f8e13563f7de7e6d) Do not dispose cryptography when it is not included
+
+
+
+## 2025 November
+
+### Features:
+
+* [`283062`](https://github.com/Oldes/Rebol3/commit/283062136f49cd52561e5fc9a47311be7aa0be9e) Add optional fast in-memory LZAV de/compression
+* [`e2a2d2`](https://github.com/Oldes/Rebol3/commit/e2a2d2b427de90b70e7644300b6358b7926e5549) Allow extensions to register new compression methods
+* [`e174bf`](https://github.com/Oldes/Rebol3/commit/e174bfad9b4de8072387bd38a910c1e491a0413e) New `did` native returning TRUE when given a truthy value
+
+### Changes:
+
+* [`d34ea4`](https://github.com/Oldes/Rebol3/commit/d34ea4d317bc87f5a388a64daae9f5c3edf3dfc5) Update xxhash source to version 0.8.3
+* [`a7d7e3`](https://github.com/Oldes/Rebol3/commit/a7d7e304c41ef6ea1e5577b34ca9a48165b346f3) Additional fixes related to Register_Compress_Method integration
+* [`e349a7`](https://github.com/Oldes/Rebol3/commit/e349a7e29136db1e1300944762e4b5b0b5a837ec) Initialize optional compression methods using Register_Compress_Method
+* [`57b590`](https://github.com/Oldes/Rebol3/commit/57b590799344f467abea5ca69491131ca7a70e29) Update Brotli source to version 1.2.0
+* [`76425d`](https://github.com/Oldes/Rebol3/commit/76425d1e31d776162741e8e81c39da584ad6e84c) Unify definitions of endianness-related macros
+
+### Fixes:
+
+* [`683095`](https://github.com/Oldes/Rebol3/commit/683095bc2e86a77bb17dd2742e368b4c5b77f971) Handle TLS handshake record received in multiple chunks
+* [`da4162`](https://github.com/Oldes/Rebol3/commit/da416289d1322082e607265c541470caf79d6f98) Pass none as the error argument when an extension returns an error without a message
+* [`47fd36`](https://github.com/Oldes/Rebol3/commit/47fd3671a61a11c4975cbff6dabfdc79e1134eaa) Validate handle data is not NULL before releasing
+* [`c8397b`](https://github.com/Oldes/Rebol3/commit/c8397b8b8755e52281142c2daf0a3820c4416f5f) Missing argument for throw-http-error in the HTTP scheme
+* [`67f5da`](https://github.com/Oldes/Rebol3/commit/67f5da5d8d730b442a058daccdb6d242d55cc3aa) TLS protocol: handle site using TLS1.2 with rss_pss signature algorithm
+
+
 ## 2025 October
 
 ### Features:
 
+* [`645a24`](https://github.com/Oldes/Rebol3/commit/645a247a5d77bc27ed58fb053362e5b6996f5c17) Enhance HTML-entities codec with hexadecimal variant support
+* [`796816`](https://github.com/Oldes/Rebol3/commit/7968169e69de9fc66beaca22f555e72a2d658ba3) Allow `make tuple!` to accept decimal values
+* [`7562e9`](https://github.com/Oldes/Rebol3/commit/7562e9095a269caee7f9517204f58bceb0a922be) By default return Rebol tuple color from the `request-color` function
+* [`c7bedd`](https://github.com/Oldes/Rebol3/commit/c7bedd6439f100c12f1743098ffdb029cded64b9) Include `request-color` in macOS builds
+* [`3f484b`](https://github.com/Oldes/Rebol3/commit/3f484b8c775365a4219e30611df8f7e231afde62) Include `request-dir` and `request-file` in macOS builds
 * [`f190da`](https://github.com/Oldes/Rebol3/commit/f190dae17d08af2f47e593103e660ff4803e08ce) Add TLS v1.3 protocol support
 
 
 ### Changes:
 
+* [`ad0e33`](https://github.com/Oldes/Rebol3/commit/ad0e33aa188316702bf549ff2474ead9cbd03665) Disallow `trim/with` on binary input
+* [`298f05`](https://github.com/Oldes/Rebol3/commit/298f054359a1fe1eac4883e18358f3752f77f17f) Integrate host files into Rebol library
 * [`72af36`](https://github.com/Oldes/Rebol3/commit/72af3618de6c75e24324d7db1e7f19f5df90bda4) Allow 'number?' to accept 'unset!' value
 
 ### Fixes:
 
+* [`380b4d`](https://github.com/Oldes/Rebol3/commit/380b4dda207711c033427ae8e413f19efe3ae54f) Find/any returning incorrect result
+* [`2b412a`](https://github.com/Oldes/Rebol3/commit/2b412ad809e1a774b8e1193bd0f6f7705775fc60) WebSocket module - correctly handle fragmented messages
+* [`0dc36c`](https://github.com/Oldes/Rebol3/commit/0dc36c876b55c24f2263be10fa306f2cf4d91e4d) Properly handle escaped characters in XML attribute values
+* [`61a579`](https://github.com/Oldes/Rebol3/commit/61a579302f6f5f3e2d96213935227c4968a274b4) Force string conversion when reading URL with /string refinement
+* [`0a7323`](https://github.com/Oldes/Rebol3/commit/0a732326f0a423551d629a63f967a3a7d95c1f09) Force string conversion when reading URL with /lines refinement
+* [`25a3d1`](https://github.com/Oldes/Rebol3/commit/25a3d150510a44a94d3c85917d22a75bd4e9bfaa) Gracefully handle invalid TLS extension length and improve TLS 1.2 support
+* [`4dbe45`](https://github.com/Oldes/Rebol3/commit/4dbe4525fc9eeb544dc5566e351215624642c8d6) Throw error for unsupported `binary/read` spec values
 * [`969f3d`](https://github.com/Oldes/Rebol3/commit/969f3d2d93b2249f2b775cb9db8d2a913e4f64a0) Handle HTTP redirects to prevent bad requests in some cases
 * [`6ef022`](https://github.com/Oldes/Rebol3/commit/6ef022934a5ee91cb92cfbb6a00d7a0af33c8754) Correct 'find' behavior for tags in strings
 
