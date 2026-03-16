@@ -3,7 +3,7 @@
 **  REBOL [R3] Language Interpreter and Run-time Environment
 **
 **  Copyright 2012 REBOL Technologies
-**  Copyright 2012-2025 Rebol Open Source Contributors
+**  Copyright 2012-2026 Rebol Open Source Contributors
 **  REBOL is a trademark of REBOL Technologies
 **
 **  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,6 @@
 ***********************************************************************/
 
 #include "sys-core.h"
-
 
 /***********************************************************************
 **
@@ -554,7 +553,7 @@ done:
 
 /***********************************************************************
 **
-*/	static void Sort_Block(REBVAL *block, REBFLG ccase, REBVAL *skipv, REBVAL *compv, REBVAL *part, REBFLG all, REBFLG rev)
+*/	static void Sort_Block(REBVAL *block, REBFLG ccase, REBVAL *skipv, REBVAL *compv, REBVAL *part, REBFLG all, REBFLG rev, REBFLG unst)
 /*
 **		series [series!]
 **		/case {Case sensitive sort}
@@ -566,6 +565,7 @@ done:
 **		length [number! series!] {Length of series to sort}
 **		/all {Compare all fields}
 **		/reverse {Reverse sort order}
+**		/unstable {Unstable Adaptive Symmetry Partition sort}
 **
 ***********************************************************************/
 {
@@ -583,6 +583,10 @@ done:
 		skip = Get_Num_Arg(skipv);
 		if (skip <= 0 || len % skip != 0 || skip > len)
 			Trap_Range(skipv);
+	}
+	if (IS_INTEGER(compv)) {
+		if (IS_NONE(skipv) || VAL_INT64(compv)<1 || VAL_INT64(compv)>VAL_INT64(skipv))
+			Trap1(RE_INVALID_ARG, compv);
 	}
 
 	REBU64 flags = 0;
@@ -613,7 +617,7 @@ done:
 		// Validate first...
 		REBVAL* tmp = VAL_BLK_DATA(compv);
 		while (!IS_END(tmp)) {
-			if (!IS_INTEGER(tmp) || VAL_INT64(tmp) < 1)
+			if (!IS_INTEGER(tmp) || VAL_INT64(tmp) < 1 || VAL_INT64(tmp) > skip)
 				Trap1(RE_INVALID_ARG, tmp);
 			tmp++;
 		}
@@ -622,7 +626,12 @@ done:
 	else {
 		cmp = Compare_Val;
 	}
-	reb_qsort((void*)VAL_BLK_DATA(block), len, size, cmp);
+	if (unst) {
+		unstable_sort((void*)VAL_BLK_DATA(block), len, size, cmp);
+	}
+	else {
+		stable_sort((void*)VAL_BLK_DATA(block), len, size, cmp);
+	}
 
 	// Stored comparator and flags are not needed anymore
 	DS_DROP;
@@ -995,7 +1004,8 @@ zero_blk:
 			D_ARG(6),	// comparator
 			D_ARG(8),	// part-length
 			D_REF(9),	// all fields
-			D_REF(10)	// reverse
+			D_REF(10),	// reverse
+			D_REF(11)	// unstable
 		);
 		break;
 

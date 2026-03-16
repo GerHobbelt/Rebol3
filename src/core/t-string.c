@@ -3,7 +3,7 @@
 **  REBOL [R3] Language Interpreter and Run-time Environment
 **
 **  Copyright 2012 REBOL Technologies
-**  Copyright 2012-2025 Rebol Open Source Contributors
+**  Copyright 2012-2026 Rebol Open Source Contributors
 **  REBOL is a trademark of REBOL Technologies
 **
 **  Licensed under the Apache License, Version 2.0 (the "License");
@@ -563,7 +563,7 @@ static const cmp_func sfunc_table[2][2][2][2] = {
 
 /***********************************************************************
 **
-*/	static void Sort_String(REBVAL *string, REBFLG ccase, REBVAL *skipv, REBVAL *compv, REBVAL *part, REBFLG all, REBFLG rev)
+*/	static void Sort_String(REBVAL *string, REBFLG ccase, REBVAL *skipv, REBVAL *compv, REBVAL *part, REBFLG all, REBFLG rev, REBFLG uns)
 /*
 ***********************************************************************/
 {
@@ -632,7 +632,7 @@ static const cmp_func sfunc_table[2][2][2][2] = {
 		// Using the offset comparator
 		if (all) Trap0(RE_BAD_REFINES); // not compatible
 		REBI64 ofs = VAL_INT64(compv);
-		if (ofs < 1 || ofs > skip) Trap_Arg(compv);
+		if (ofs < 1 || ofs > skip || IS_NONE(skipv)) Trap_Arg(compv);
 		if (ccase) SET_FLAG(flags, SORT_FLAG_CASE);
 		DS_PUSH_INTEGER(ofs-1);
 		DS_PUSH_INTEGER(flags);
@@ -649,8 +649,12 @@ static const cmp_func sfunc_table[2][2][2][2] = {
 		if (all && !IS_NONE(compv)) Trap0(RE_BAD_REFINES);
 		sfunc = sfunc_table[all][ccase][wide != 1][rev];
 	}
-
-	reb_qsort((void *)str_bin, len, size * wide, sfunc);
+	if (uns) {
+		unstable_sort((void*)str_bin, len, size * wide, sfunc);
+	}
+	else {
+		stable_sort((void*)str_bin, len, size * wide, sfunc);
+	}
 	if (wide == 4) {
 		UTF32_To_UTF8(VAL_SERIES(string), str_bin, len*4*skip, OS_LITTLE_ENDIAN);
 	}
@@ -1079,7 +1083,7 @@ zero_str:
 			((args & (AM_TRIM_ALL | AM_TRIM_WITH)) &&
 			(args & (AM_TRIM_HEAD | AM_TRIM_TAIL | AM_TRIM_LINES | AM_TRIM_AUTO))) ||
 			((args & AM_TRIM_AUTO) &&
-			(args & (AM_TRIM_HEAD | AM_TRIM_TAIL | AM_TRIM_LINES | AM_TRIM_ALL | AM_TRIM_WITH)))
+			(args & (AM_TRIM_HEAD | AM_TRIM_LINES | AM_TRIM_ALL | AM_TRIM_WITH)))
 		)
 			Trap0(RE_BAD_REFINES);
 		if (IS_BINARY(value))
@@ -1109,7 +1113,8 @@ zero_str:
 			D_ARG(6),	// comparator
 			D_ARG(8),	// part-length
 			D_REF(9),	// all fields
-			D_REF(10)	// reverse
+			D_REF(10),	// reverse
+			(D_REF(11) || IS_BINARY(value)) // unstable
 		);
 		break;
 
