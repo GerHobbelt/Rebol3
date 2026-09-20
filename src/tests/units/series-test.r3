@@ -2748,6 +2748,66 @@ try/with [
 
 ===end-group===
 
+===start-group=== "EMAIL"
+--test-- "email getters"
+	;@@ https://github.com/Oldes/Rebol-issues/issues/1489
+	e: someone@rebol.tech
+	--assert e/user = "someone"
+	--assert e/host = "rebol.tech"
+	;; when not at head...
+	e: find e ".tech"
+	--assert e/user = "someone"
+	--assert e/host = "rebol.tech"
+	;; when @ is missing
+	e: as email! "foo"
+	--assert e/user = "foo"
+	--assert e/host = none
+	;; with multiple @
+	e: as email! "aaa@bbb@ccc"
+	--assert e/user = "aaa"
+	--assert e/host = "bbb@ccc"
+--test-- "email setters"
+	e: someone@rebol.tech
+	e/host: "gmail.com"
+	--assert e = someone@gmail.com
+	e/user: "foo"
+	--assert e = foo@gmail.com
+	;; when @ is missing
+	clear e
+	e/user: "bob"
+	--assert e = #(email! "bob")
+	clear e
+	e/host: %rebol.tech
+	--assert e = #(email! "@rebol.tech")
+	;; unicode...
+	e/user: "šiška"
+	--assert e = šiška@rebol.tech
+
+--test-- "make email! block!"
+	;@@ https://github.com/Oldes/Rebol-issues/issues/2708
+	--assert (make email! [aaa]) = #(email! "aaa")
+	--assert (make email! [aaa bbb]) = aaa@bbb
+	--assert (make email! [aaa bbb cc]) = aaa@bbb.cc
+	--assert (make email! [aaa bbb cc dd]) = aaa@bbb.cc.dd
+	--assert all [error? e: try [make email! []] e/id = 'bad-make-arg]
+
+===end-group===
+
+===start-group=== "URL"
+--test-- "make url! block!"
+	;@@ https://github.com/Oldes/Rebol-issues/issues/2709
+	--assert (make url! [http]) = http://
+	--assert (make url! [http www.rebol.com %reboldoc.html]) = http://www.rebol.com/reboldoc.html
+	--assert all [error? e: try [make email! []] e/id = 'bad-make-arg]
+--test-- "form url!"
+	;@@ https://github.com/Oldes/Rebol-issues/issues/2710
+	;; `form` does not perform implicit dehexing like Rebol 2!
+	--assert {http://www.somesite.dom/odd%28dir%29/odd%7Bfile%20+%7D.txt} = form http://www.somesite.dom/odd%28dir%29/odd%7Bfile%20+%7D.txt
+	--assert "http://www.somesite.dom/odd%28dir%29/odd%7Bfile%7D.txt" = mold http://www.somesite.dom/odd%28dir%29/odd%7Bfile%7D.txt
+	--assert "odd(dir)/odd{file}.txt" = form %odd%28dir%29/odd%7Bfile%7D.txt
+===end-group===
+
+
 
 ===start-group=== "BINARY"
 

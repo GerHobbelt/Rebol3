@@ -334,6 +334,43 @@ Rebol [
 		--assert (unique/skip "baaččbač" 2) == "baaččb"
 		--assert (unique/skip "b🙂aččb🙂č" 2) == "b🙂aččb🙂č"
 
+	--test-- "mold/part"
+		str: "═════"
+		--assert {"}   == mold/part str 1
+		--assert {"═}  == mold/part str 2
+		--assert {"══} == mold/part str 3
+		--assert {"══} == copy/part mold str 3
+	--test-- "mold/part with LF"
+		str: "^/═════"
+		--assert {"}     == mold/part str 1
+		--assert {"^^}   == mold/part str 2
+		--assert {"^^/}  == mold/part str 3
+		--assert {"^^/═} == mold/part str 4
+		--assert {"^^/═} == copy/part mold str 4
+	--test-- "mold/part with {"
+		str: "{═════"
+		--assert {"}     == mold/part str 1
+		--assert {"^{}   == mold/part str 2
+		--assert {"^{═}  == mold/part str 3
+		--assert {"^{══} == mold/part str 4
+		--assert {"^{══} == copy/part mold str 4
+	--test-- "mold/part long"
+		str: "{═════{═════{═════{═════{═════{═════{═════^""
+		--assert {"}     == mold/part str 1
+		--assert {"^{}   == mold/part str 2
+		--assert {"^{═}  == mold/part str 3
+		--assert {"^{══} == mold/part str 4
+		--assert "{^^{═" == copy/part mold str 4
+	--test-- "copy/part mold/part"
+		str: "═════"
+		--assert {"═} == copy/part mold/part str 4 2
+		--assert {"══} == copy/part mold/part str 4 3
+		--assert {"═══} == copy/part mold/part str 4 4
+		--assert {"═══} == copy/part mold/part str 4 5
+		--assert {"════} == copy/part mold/part str 6 5
+		--assert {"═════"} == copy/part mold/part str 8 8
+
+
 ===end-group===
 
 
@@ -670,6 +707,12 @@ Rebol [
 		comp: func [a b] [a <= b]
 		--assert "Aa aá aa ab ba " == sort/compare/skip     "ab aa Aa aá ba " :comp 3 ;; compares only the first char
 		--assert "Aa aa ab aá ba " == sort/compare/skip/all "ab aa Aa aá ba " :comp 3
+	--test-- "sort block of strings"
+		;@@ https://github.com/Oldes/Rebol-issues/issues/2716
+		--assert ["abå" "cd" "ef"] == sort ["ef" "cd" "abå"]
+		--assert ["abå" "cd" "ef"] == ssort/unstable ["ef" "cd" "abå"]
+		--assert ["ef" "cd" "abå"] == sort/reverse ["ef" "cd" "abå"]
+		--assert ["ef" "cd" "abå"] == sort/reverse/unstable ["ef" "cd" "abå"]
 
 ===end-group===
 
