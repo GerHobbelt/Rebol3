@@ -204,10 +204,10 @@ dir-tree: func [
 	unless block? value [exit]
 
 	str: [
-		"^[[31;1m    " ;├───"
-		"^[[31;1m    " ;│   "
-		"^[[31;1m    " ;└───"
-		"^[[31;1m    " ;    "
+		"^[[31;1m├───"
+		"^[[31;1m│   "
+		"^[[31;1m└───"
+		"^[[31;1m    "
 	]
 
 	sort/compare value func[a b][
@@ -309,11 +309,9 @@ list-dir: closure/with [
 				"^[[m"
 			]
 		][
-			format [date $33 -8 $0 #" "] reduce [
+			format [date /yellow -8 /reset #" " /bright-yellow] [
 				size
-				"^[[33;1m"
 				second split-path info/1
-				"^[[m"
 			]
 		]
 	]
