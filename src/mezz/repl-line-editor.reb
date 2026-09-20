@@ -2,9 +2,10 @@ Rebol [
 	Title:   "Line editor context"
 	Purpose: {Reusable line editor}
 	Name:    line-editor
-	Version: 0.1.0
-	Date:    24-Apr-2026
-	Needs:   3.21.16
+	Type:    module
+	Version: 0.3.0
+	Date:    6-May-2026
+	Needs:   3.21.18
 	exports: [line-editor!]
 ]
 
@@ -12,18 +13,23 @@ line-editor!: context [
 	prompt: "^[[1;31m## ^[[1;33m"
 	result-limit: 500 ;; max length of the molded result output
 	buffer: copy ""
-	line: pos: result: code: banner: _
+	line: pos: result: code: banner: parent-console: _
 	time: 0:0
 	prev-col: col: 0
 	history: clear []
 	current-key: _
-	eval-ctx: context []
+	console-ctx: context []
 	ansi: system/options/ansi
 
 	init: func [][
 		clear buffer
 		line: pos: clear ""
 		prev-col: col: 0
+		parent-console: system/console/current
+		if none? parent-console [
+			try [append history load system/options/data/.repl-history]
+		]
+		system/console/current: context? 'parent-console
 		if string? :banner [print banner]
 		prin prompt
 	]
@@ -69,6 +75,7 @@ line-editor!: context [
 			]
 			#"^C" [
 				print ajoin [clear-newline ansi/magenta "(CTRL+C)"]
+				on-exit
 				break
 			]
 			#"^U" [ ;= CTRL+U - clear line
@@ -77,6 +84,7 @@ line-editor!: context [
 				emit [clear-line prompt]
 			]
 			#"^L" [ ;= CTRL-L - clear screen
+				pos: clear line
 				col: prev-col: 0
 				emit [clear-screen clear-buffer prompt]
 			]
@@ -147,15 +155,20 @@ line-editor!: context [
 	on-line: does [
 		result: try [transcode code: line]
 		prin clear-newline
-		code: bind/new/set result eval-ctx
-		code: bind code system/contexts/lib
-		set/any 'result try/all [
-			catch/quit code
-		]
-		if system/state/quit? [
-			system/state/quit?: false ;; quit only from this console
-			on-quit
-			break
+		either error? :result [
+			;; It's an error from transcode, no need to show the stack!
+			unset in :result 'where
+		][
+			code: bind result system/contexts/lib  ;; core values
+			code: bind code system/contexts/user   ;; e.g. values from startup scripts
+			code: bind/set code console-ctx        ;; per console session values
+			;; Evaluate code with protection from all errors and quit.
+			set/any 'result try/all [ catch/quit code ]
+			if system/state/quit? [
+				system/state/quit?: false ;; quit only from this console
+				on-quit
+				break
+			]
 		]
 		on-result
 	]
@@ -178,7 +191,7 @@ line-editor!: context [
 				]
 				emit LF
 			]
-			unset? :result [] ; ignored
+			unset? :result [prin LF] ; ignored
 		]
 		unset 'result
 		emit [clear-line prompt]
@@ -197,9 +210,20 @@ line-editor!: context [
 		col: col + 4
 		if tail? pos [prev-col: col]
 	]
+	on-exit: does [
+		system/console/current: parent-console
+		;; save only root console's history
+		if none? parent-console [ try [save-history] ]
+		()
+	]
 	on-quit: does [
 		emit [clear-line ansi/magenta  "(quit)" ansi/reset LF]
 		flush
+		on-exit
+	]
+	save-history: does [
+		parse history [any ["q" | "quit"] history:] ;; don't include `quit` commands
+		save system/options/data/.repl-history new-line/all history true
 	]
 
 	;-- Private editor functions ---
@@ -259,7 +283,7 @@ line-editor!: context [
 	]		
 
 	;---- Constants ----
-	clear-line:      "^M^[[K"            ;; go to line start, clear to its end
+	clear-line:      "^M^[[K^[[0m"       ;; go to line start, clear to its end, reset
 	clear-newline:   "^/^[[K"            ;; go to new line and clear it (removes optional status line)
 	;clear-next-line: "^[[1B^[[2K^[[1A"
 	clear-down:      "^[[J"
@@ -283,8 +307,10 @@ line-editor!: context [
 	ml-prompt:  _        ;; stored original prompt while inside multiline mode
 	ml-type:    _        ;; current bracket type
 	reset-multiline: does [
-		multiline: none
-		prompt: ml-prompt
+		if multiline [
+			multiline: none
+			prompt: ml-prompt
+		]
 	]
 
 	;-- Status line ---
