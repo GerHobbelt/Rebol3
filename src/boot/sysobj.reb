@@ -229,6 +229,7 @@ catalog: object [
 		pause
 		capital
 		backtab
+		backspace
 		begin
 	]
 	file-types: []
@@ -263,7 +264,8 @@ state: object [
 	;; The following 3 flags are updated by the `read-key` call
 	;; and can be used to detect if those keys were also pressed.
 	control?: shift?: alt?: none
-	wait-list: []     ; List of ports to add to 'wait
+	quit?: none   ;; Used by `catch/quit` to indicate that a quit is requested.
+	wait-list: [] ;; List of ports to add to 'wait
 ]
 
 modules: object [
