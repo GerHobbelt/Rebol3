@@ -3,7 +3,7 @@
 **  REBOL [R3] Language Interpreter and Run-time Environment
 **
 **  Copyright 2012 REBOL Technologies
-**  Copyright 2012-2025 Rebol Open Source Contributors
+**  Copyright 2012-2026 Rebol Open Source Contributors
 **  REBOL is a trademark of REBOL Technologies
 **
 **  Licensed under the Apache License, Version 2.0 (the "License");
@@ -246,9 +246,9 @@ static struct digest {
 	REBVAL *method = D_ARG(ARG_CHECKSUM_METHOD);
 	REBVAL *spec   = D_ARG(ARG_CHECKSUM_SPEC);
 	REBINT sym;
-	REBINT sum;
-	REBINT i = 0;
-	REBCNT j;
+	REBCNT sum = 0;
+	REBLEN i = 0;
+	REBLEN j;
 	REBSER *digest;
 	REBCNT len, keylen;
 	REBYTE *bin;
@@ -354,26 +354,25 @@ static struct digest {
 		Trap0(RE_BAD_REFINES);
 
 	if (sym == SYM_CRC32 || sym == SYM_ADLER32) {
-		i = (sym == SYM_CRC32) ? CRC32(bin, len) : ADLER32_FUNC(0x00000001L, bin, len);
+		sum = (sym == SYM_CRC32) ? CRC32(bin, len) : ADLER32_FUNC(0x00000001L, bin, len);
 	}
 	else if (sym == SYM_HASH) {  // /hash
 		if(!D_REF(ARG_CHECKSUM_WITH)) Trap0(RE_MISSING_ARG);
 		if (!IS_INTEGER(spec)) Trap1(RE_BAD_REFINE, D_ARG(ARG_CHECKSUM_SPEC));
-		sum = VAL_INT32(spec); // size of the hash table
-		if (sum <= 1) sum = 1;
-		i = Hash_Value(data) % sum;
+		sum = (REBCNT)MAX(1, VAL_INT64(spec)); // size of the hash table
+		sum = Hash_Value(data) % sum;
 	}
 	else if (sym == SYM_CRC24) {
-		i = Compute_CRC24(bin, len);
+		sum = Compute_CRC24(bin, len);
 	}
 	else if (sym == SYM_TCP) {
-		i = Compute_IPC(bin, len);
+		sum = Compute_IPC(bin, len);
 	}
 	else {
 		Trap_Arg(D_ARG(ARG_CHECKSUM_METHOD));
 	}
 
-	DS_RET_INT(i);
+	DS_RET_INT(sum);
 	return R_RET;
 }
 
@@ -456,12 +455,19 @@ static struct digest {
 	REBOOL brk = !D_REF(6);
 
 	if (IS_INTEGER(arg)) {
-		// Convert integer to binary...
-		SET_BINARY(arg, Make_Binary_BE64(arg));
-		// ...and trim leading zeros...
-		REBCNT i = 0;
-		while (i <= 7 && VAL_BIN_HEAD(arg)[i]==0) { ++i; }
-		VAL_INDEX(arg) = i;
+		if (VAL_INT64(arg) != 0) {
+			// Convert integer to binary...
+			SET_BINARY(arg, Make_Binary_BE64(arg));
+			// ...and trim leading zeros...
+			REBCNT i = 0;
+			while (i <= 7 && VAL_BIN_HEAD(arg)[i] == 0) { ++i; }
+			VAL_INDEX(arg) = i;
+		}
+		else {
+			// Special case for e.g.: enbase 0 16 ;== "00"
+			SET_BINARY(arg, Make_Binary(1));
+			VAL_TAIL(arg) = 1;
+		}
 	}
 	if (D_REF(4)) {
 		limit = Partial(arg, 0, part, 0); // Can modify value index.
@@ -552,7 +558,6 @@ static struct digest {
 ***********************************************************************/
 {
 	REBU32 n;
-	REBSER* ser;
 	REBYTE* bp, * dp;
 	REBI64 len = (REBI64)length;
 	const REBCHR space_char = escape_char == '=' ? '_' : '+';
